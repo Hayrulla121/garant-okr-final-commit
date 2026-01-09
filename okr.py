@@ -1,6 +1,5 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import plotly.graph_objects as go
 import pandas as pd
 import json
 import uuid
@@ -29,6 +28,7 @@ TRANSLATIONS = {
         "type": "Type",
         "higher_better": "↑ Higher is better",
         "lower_better": "↓ Lower is better",
+        "qualitative": "📊 Qualitative (A/B/C/D/E)",
         "unit": "Unit",
         "thresholds": "Thresholds",
         "add_kr": "➕ Add KR",
@@ -40,7 +40,6 @@ TRANSLATIONS = {
         "add_kr_to_obj": "➕ Add KR to this Objective",
         "add": "➕ Add",
         "delete_objective": "🗑️ Delete Objective",
-        "export_json": "Export JSON",
         "export_excel": "Export Excel",
         "save_data": "Save Data",
         "load_data": "📂 Load Data",
@@ -75,6 +74,19 @@ TRANSLATIONS = {
         "avg": "Avg",
         "toggle_sidebar": "Toggle sidebar",
         "value": "Value",
+        "weight": "Weight",
+        "objective_weight": "Objective Weight (%)",
+        "kr_weight": "KR Weight (%)",
+        "weights_warning": "⚠️ Weights should sum to 100%",
+        "weights_total": "Total",
+        "qualitative_grade": "Grade",
+        "grade_a": "A - Exceptional",
+        "grade_b": "B - Very Good",
+        "grade_c": "C - Good",
+        "grade_d": "D - Meets",
+        "grade_e": "E - Below",
+        "weighted_score": "Weighted Score",
+        "dept_weighted_avg": "Dept. Weighted Average",
     },
     "ru": {
         "title": "OKR Трекер",
@@ -95,6 +107,7 @@ TRANSLATIONS = {
         "type": "Тип",
         "higher_better": "↑ Больше лучше",
         "lower_better": "↓ Меньше лучше",
+        "qualitative": "📊 Качественный (A/B/C/D/E)",
         "unit": "Единица",
         "thresholds": "Пороги",
         "add_kr": "➕ Добавить KR",
@@ -106,7 +119,6 @@ TRANSLATIONS = {
         "add_kr_to_obj": "➕ Добавить KR",
         "add": "➕ Добавить",
         "delete_objective": "🗑️ Удалить Цель",
-        "export_json": "Экспорт",
         "export_excel": "Экспорт Excel",
         "save_data": "Сохранить",
         "load_data": "📂 Загрузить",
@@ -142,6 +154,19 @@ TRANSLATIONS = {
         "avg": "Сред",
         "toggle_sidebar": "Скрыть/показать панель",
         "value": "Значение",
+        "weight": "Вес",
+        "objective_weight": "Вес цели (%)",
+        "kr_weight": "Вес KR (%)",
+        "weights_warning": "⚠️ Веса должны составлять 100%",
+        "weights_total": "Итого",
+        "qualitative_grade": "Оценка",
+        "grade_a": "A - Исключительно",
+        "grade_b": "B - Очень хорошо",
+        "grade_c": "C - Хорошо",
+        "grade_d": "D - Соответствует",
+        "grade_e": "E - Ниже",
+        "weighted_score": "Взвешенная оценка",
+        "dept_weighted_avg": "Взвеш. среднее отдела",
     },
     "uz": {
         "title": "OKR Трекер",
@@ -162,6 +187,7 @@ TRANSLATIONS = {
         "type": "Тури",
         "higher_better": "↑",
         "lower_better": "↓",
+        "qualitative": "📊 Сифат (A/B/C/D/E)",
         "unit": "Бирлик",
         "thresholds": "Чегаралар",
         "add_kr": "➕ KR Қўшиш",
@@ -173,7 +199,6 @@ TRANSLATIONS = {
         "add_kr_to_obj": "➕ KR Қўшиш",
         "add": "➕ Қўшиш",
         "delete_objective": "🗑️ Ўчириш",
-        "export_json": "Экспорт",
         "export_excel": "Excel Экспорт",
         "save_data": "Сақлаш",
         "load_data": "📂 Юклаш",
@@ -208,6 +233,19 @@ TRANSLATIONS = {
         "avg": "Ўрт",
         "toggle_sidebar": "Панелни яшириш/кўрсатиш",
         "value": "Қиймат",
+        "weight": "Вазн",
+        "objective_weight": "Мақсад вазни (%)",
+        "kr_weight": "KR вазни (%)",
+        "weights_warning": "⚠️ Вазнлар 100% бўлиши керак",
+        "weights_total": "Жами",
+        "qualitative_grade": "Баҳо",
+        "grade_a": "A - Фантастик",
+        "grade_b": "B - Жуда яхши",
+        "grade_c": "C - Яхши",
+        "grade_d": "D - Кутилган",
+        "grade_e": "E - Ёмон",
+        "weighted_score": "Вазнли баҳо",
+        "dept_weighted_avg": "Бўлим вазнли ўртача",
     }
 }
 
@@ -219,17 +257,30 @@ LEVELS = {
     "exceptional": {"min": 5.00, "max": 5.00, "color": "#1e7b34"},
 }
 
+# Qualitative grades mapping (A/B/C/D/E to scores)
+QUALITATIVE_GRADES = {
+    "A": {"score": 5.00, "level": "exceptional"},
+    "B": {"score": 4.75, "level": "very_good"},
+    "C": {"score": 4.50, "level": "good"},
+    "D": {"score": 4.25, "level": "meets"},
+    "E": {"score": 3.00, "level": "below"},
+}
+
 THEME = {
-    "sidebar_bg": "#f8f9fa",
-    "sidebar_border": "#e0e0e0",
+    "sidebar_bg": "#f5f7fa",
+    "sidebar_border": "#e1e5eb",
     "main_bg": "#ffffff",
     "card_bg": "#ffffff",
-    "card_border": "#e8e8e8",
-    "card_shadow": "0 2px 4px rgba(0,0,0,0.08)",
-    "text_primary": "#2c3e50",
-    "text_secondary": "#7f8c8d",
-    "accent": "#3498db",
-    "header_bg": "#ffffff",
+    "card_border": "#e4e7ec",
+    "card_shadow": "0 4px 12px rgba(0,0,0,0.08)",
+    "text_primary": "#1a202c",
+    "text_secondary": "#64748b",
+    "accent": "#0066cc",
+    "accent_light": "#e6f0ff",
+    "header_bg": "linear-gradient(135deg, #1a365d 0%, #2c5282 100%)",
+    "success": "#059669",
+    "warning": "#d97706",
+    "danger": "#dc2626",
 }
 
 DATA_FILE = "okr_data.json"
@@ -244,7 +295,31 @@ def get_level_label(level_key: str) -> str:
     return t(level_key)
 
 
-def calculate_score(actual: float, metric_type: str, thresholds: dict) -> dict:
+def calculate_score(actual, metric_type: str, thresholds: dict) -> dict:
+    """Calculate score for a KR. Handles quantitative (higher/lower better) and qualitative (A/B/C/D/E) metrics."""
+
+    # Handle qualitative metrics (A/B/C/D/E grades)
+    if metric_type == "qualitative":
+        grade = str(actual).upper() if actual else "E"
+        if grade in QUALITATIVE_GRADES:
+            grade_info = QUALITATIVE_GRADES[grade]
+            return {
+                "score": grade_info["score"],
+                "level": grade_info["level"],
+                "level_info": LEVELS[grade_info["level"]],
+                "grade": grade
+            }
+        else:
+            # Default to E if invalid grade
+            return {
+                "score": 3.00,
+                "level": "below",
+                "level_info": LEVELS["below"],
+                "grade": "E"
+            }
+
+    # Handle quantitative metrics
+    actual = float(actual) if actual else 0.0
     below_th = thresholds['below']
     meets_th = thresholds['meets']
     good_th = thresholds['good']
@@ -317,6 +392,68 @@ def get_level_for_score(score: float) -> dict:
 
 def score_to_percentage(score: float) -> float:
     return round(((score - 3.0) / 2.0) * 100, 1)
+
+
+def calculate_weighted_objective_score(objective: dict) -> dict:
+    """Calculate weighted average score for an objective based on KR weights."""
+    krs = objective.get('key_results', [])
+    if not krs:
+        return {"score": 0, "level": get_level_for_score(0)}
+
+    total_weight = 0
+    weighted_sum = 0
+    results = []
+
+    for kr in krs:
+        kr_weight = kr.get('weight', 100 / len(krs))  # Default to equal weight
+        result = calculate_score(kr['actual'], kr['metric_type'], kr.get('thresholds', {}))
+        results.append(result)
+        weighted_sum += result['score'] * kr_weight
+        total_weight += kr_weight
+
+    # Calculate weighted average (normalize if weights don't sum to 100)
+    if total_weight > 0:
+        avg_score = weighted_sum / total_weight
+    else:
+        avg_score = sum(r['score'] for r in results) / len(results) if results else 0
+
+    return {
+        "score": round(avg_score, 2),
+        "level": get_level_for_score(avg_score),
+        "results": results,
+        "total_weight": total_weight
+    }
+
+
+def calculate_weighted_department_score(department: dict) -> dict:
+    """Calculate weighted average score for a department based on objective weights."""
+    objectives = department.get('objectives', [])
+    if not objectives:
+        return {"score": 0, "level": get_level_for_score(0)}
+
+    total_weight = 0
+    weighted_sum = 0
+    obj_scores = []
+
+    for obj in objectives:
+        obj_weight = obj.get('weight', 100 / len(objectives))  # Default to equal weight
+        obj_result = calculate_weighted_objective_score(obj)
+        obj_scores.append(obj_result)
+        weighted_sum += obj_result['score'] * obj_weight
+        total_weight += obj_weight
+
+    # Calculate weighted average (normalize if weights don't sum to 100)
+    if total_weight > 0:
+        avg_score = weighted_sum / total_weight
+    else:
+        avg_score = sum(s['score'] for s in obj_scores) / len(obj_scores) if obj_scores else 0
+
+    return {
+        "score": round(avg_score, 2),
+        "level": get_level_for_score(avg_score),
+        "objective_scores": obj_scores,
+        "total_weight": total_weight
+    }
 
 
 def create_gauge(score: float, compact: bool = False) -> str:
@@ -422,31 +559,36 @@ def create_gauge(score: float, compact: bool = False) -> str:
 
 def render_sidebar(departments):
     """Render professional left sidebar with navigation and controls"""
-    # Calculate overall stats
+    # Calculate overall stats using weighted calculations
     total_objectives = sum(len(d.get('objectives', [])) for d in departments)
-    all_scores = []
+    dept_scores = []
+
     for dept in departments:
-        for obj in dept.get('objectives', []):
-            krs = obj.get('key_results', [])
-            if krs:
-                results = [calculate_score(kr['actual'], kr['metric_type'], kr['thresholds']) for kr in krs]
-                avg_score = sum(r['score'] for r in results) / len(results)
-                all_scores.append(avg_score)
+        if dept.get('objectives'):
+            dept_result = calculate_weighted_department_score(dept)
+            dept_scores.append(dept_result['score'])
 
-    avg_overall = round(sum(all_scores) / len(all_scores), 2) if all_scores else 0
-    overall_level = get_level_for_score(avg_overall) if all_scores else {"color": THEME['text_secondary']}
+    avg_overall = round(sum(dept_scores) / len(dept_scores), 2) if dept_scores else 0
+    overall_level = get_level_for_score(avg_overall) if dept_scores else {"color": THEME['text_secondary']}
 
     st.markdown(
-        f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px 0;'>📊 {t('overview')}</h3>",
+        f"<h3 style='font-size:11px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 16px 0; font-weight:600;'>📊 {t('overview')}</h3>",
         unsafe_allow_html=True)
 
-    st.markdown(
-        f"<div style='background:white; padding:12px; border-radius:6px; margin-bottom:8px; border:1px solid {THEME['card_border']};'><div style='font-size:28px; font-weight:bold; color:{THEME['accent']};'>{total_objectives}</div><div style='font-size:12px; color:{THEME['text_secondary']};'>{t('total_objectives')}</div></div>",
-        unsafe_allow_html=True)
+    # Stats cards with gradient backgrounds
+    st.markdown(f"""
+        <div style='background:linear-gradient(135deg, #e6f0ff 0%, #f0f7ff 100%); padding:16px; border-radius:10px; margin-bottom:12px; border:1px solid #cce0ff;'>
+            <div style='font-size:32px; font-weight:700; color:#0066cc; line-height:1;'>{total_objectives}</div>
+            <div style='font-size:11px; color:#4a90d9; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('total_objectives')}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown(
-        f"<div style='background:white; padding:12px; border-radius:6px; margin-bottom:20px; border:1px solid {THEME['card_border']};'><div style='font-size:28px; font-weight:bold; color:{overall_level['color']};'>{avg_overall}</div><div style='font-size:12px; color:{THEME['text_secondary']};'>{t('average_score')}</div></div>",
-        unsafe_allow_html=True)
+    st.markdown(f"""
+        <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
+            <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
+            <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('weighted_score')}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 
 def render_objective_card(objective, dept_idx, obj_idx, compact=True):
@@ -456,52 +598,73 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
         st.warning(t("no_krs"))
         return
 
-    # Calculate scores
-    results = [calculate_score(kr['actual'], kr['metric_type'], kr['thresholds']) for kr in krs]
-    avg_score = sum(r['score'] for r in results) / len(results)
+    # Calculate weighted scores
+    obj_result = calculate_weighted_objective_score(objective)
+    avg_score = obj_result['score']
+    results = obj_result['results']
     avg_level = get_level_for_score(avg_score)
     avg_pct = score_to_percentage(avg_score)
+    obj_weight = objective.get('weight', 0)  # Objective weight within department
 
     if compact:
-        # GRID VIEW - Compact card display wrapped in prominent frame
-        st.markdown(
-            f"<div style='background:{THEME['card_bg']}; border:2px solid {THEME['card_border']}; border-radius:10px; padding:0; margin-bottom:16px; box-shadow:0 4px 8px rgba(0,0,0,0.12);'>",
-            unsafe_allow_html=True)
-        st.markdown(
-            f"<div style='padding:16px; border-bottom:1px solid {THEME['card_border']}; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;'><h3 style='margin:0; font-size:16px; color:{THEME['text_primary']}; font-weight:600; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.3;'>{objective['name']}</h3><div style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:20px; font-size:14px; font-weight:bold; white-space:nowrap; flex-shrink:0;'>{avg_score:.2f}</div></div>",
-            unsafe_allow_html=True)
-        st.markdown(
-            f"<div style='padding:12px 16px;'><div style='margin-bottom:12px;'><span style='display:inline-block; padding:4px 10px; background:{avg_level['color']}20; color:{avg_level['color']}; border-radius:4px; font-size:11px; font-weight:600; text-transform:uppercase;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span><span style='display:inline-block; padding:4px 10px; margin-left:8px; background:{THEME['sidebar_bg']}; color:{THEME['text_secondary']}; border-radius:4px; font-size:11px;'>{len(krs)} KRs</span></div>",
-            unsafe_allow_html=True)
+        # GRID VIEW - Professional compact card with modern styling
+        weight_badge = f"<span style='display:inline-block; padding:5px 12px; background:#fef3c7; color:#d97706; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
+
+        st.markdown(f"""
+            <div style='background:{THEME['card_bg']}; border:1px solid {THEME['card_border']}; border-radius:12px; padding:0; margin-bottom:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); overflow:hidden; transition:all 0.2s ease;'>
+                <div style='padding:18px 20px; border-bottom:1px solid {THEME['card_border']}; background:linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);'>
+                    <div style='display:flex; justify-content:space-between; align-items:flex-start; gap:12px;'>
+                        <h3 style='margin:0; font-size:15px; color:{THEME['text_primary']}; font-weight:600; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.4;'>{objective['name']}</h3>
+                        <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:white; padding:6px 14px; border-radius:20px; font-size:14px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 2px 8px {avg_level['color']}40;'>{avg_score:.2f}</div>
+                    </div>
+                    <div style='margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;'>
+                        <span style='display:inline-block; padding:5px 12px; background:{avg_level['color']}12; color:{avg_level['color']}; border-radius:6px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
+                        <span style='display:inline-block; padding:5px 12px; background:#f1f5f9; color:{THEME['text_secondary']}; border-radius:6px; font-size:11px; font-weight:500;'>{len(krs)} Key Results</span>
+                        {weight_badge}
+                    </div>
+                </div>
+        """, unsafe_allow_html=True)
 
         gauge_html = create_gauge(avg_score, compact=True)
         components.html(gauge_html, height=140)
 
-        # Build KR table rows with colors matching full view
-        kr_rows = "".join([
-            f'<tr style="border-bottom:1px solid {THEME["card_border"]};">'
-            f'<td style="padding:8px; font-size:11px; color:{THEME["text_primary"]}; font-weight:bold;">KR{i + 1}</td>'
-            f'<td style="padding:8px; font-size:11px; color:{THEME["text_primary"]};" title="{kr.get("description", "") or kr["name"]}"><span style="cursor:help; border-bottom:1px dotted {THEME["text_secondary"]};">{kr["name"][:25]}{"..." if len(kr["name"]) > 25 else ""}</span></td>'
-            f'<td style="padding:8px; font-size:11px; text-align:center; background:#D6E4F0; font-weight:bold; color:{THEME["text_primary"]};">{kr["actual"]}{kr["unit"]}</td>'
-            f'<td style="padding:8px; font-size:11px; text-align:center; background:{results[i]["level_info"]["color"]}; color:white; font-weight:bold;">{results[i]["score"]:.2f}</td>'
-            f'</tr>'
-            for i, kr in enumerate(krs)
-        ])
+        # Build KR table rows with professional styling and weights
+        kr_rows = ""
+        for i, kr in enumerate(krs):
+            kr_weight = kr.get('weight', round(100 / len(krs), 1))
 
-        # Add table with header styling matching full view
+            # Handle qualitative vs quantitative display
+            if kr['metric_type'] == 'qualitative':
+                actual_display = kr.get('actual', 'E')
+                if not actual_display:
+                    actual_display = 'E'
+            else:
+                actual_display = f"{kr['actual']}{kr['unit']}"
+
+            kr_rows += f'''<tr style="border-bottom:1px solid #f1f5f9; transition:background 0.15s ease;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                <td style="padding:10px 12px; font-size:11px; color:{THEME["text_secondary"]}; font-weight:600;">KR{i + 1}</td>
+                <td style="padding:10px 12px; font-size:11px; color:{THEME["text_primary"]};" title="{kr.get("description", "") or kr["name"]}"><span style="cursor:help; border-bottom:1px dotted #cbd5e1;">{kr["name"][:28]}{"..." if len(kr["name"]) > 28 else ""}</span></td>
+                <td style="padding:10px 12px; font-size:10px; text-align:center; background:#fef3c7; color:#d97706; font-weight:600; border-radius:4px;">{kr_weight}%</td>
+                <td style="padding:10px 12px; font-size:11px; text-align:center; background:#e6f0ff; font-weight:600; color:#0066cc; border-radius:4px;">{actual_display}</td>
+                <td style="padding:10px 12px; font-size:11px; text-align:center; background:{results[i]["level_info"]["color"]}; color:white; font-weight:700; border-radius:4px;">{results[i]["score"]:.2f}</td>
+            </tr>'''
+
+        # Professional table design with weight column
         st.markdown(f"""
-        <div style='background:{THEME['card_bg']}; border:1px solid {THEME['card_border']}; border-radius:8px; padding:12px; margin-top:8px; margin-bottom:16px;'>
-            <table style='width:100%; border-collapse:collapse;'>
+        <div style='padding:16px 20px 20px 20px;'>
+            <table style='width:100%; border-collapse:separate; border-spacing:0 4px;'>
                 <thead>
-                    <tr style='background:#4472C4; color:white;'>
-                        <th style='padding:8px; font-size:11px; text-align:left; border-radius:4px 0 0 0;'>KR</th>
-                        <th style='padding:8px; font-size:11px; text-align:left;'>{t('key_result')}</th>
-                        <th style='padding:8px; font-size:11px; text-align:center; background:#5B9BD5; color:white;'>{t('fact')}</th>
-                        <th style='padding:8px; font-size:11px; text-align:center; border-radius:0 4px 0 0;'>{t('score').replace('🎯 ', '')}</th>
+                    <tr>
+                        <th style='padding:10px 12px; font-size:10px; text-align:left; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>KR</th>
+                        <th style='padding:10px 12px; font-size:10px; text-align:left; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('key_result')}</th>
+                        <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('weight')}</th>
+                        <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('fact')}</th>
+                        <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('score').replace('🎯 ', '')}</th>
                     </tr>
                 </thead>
                 <tbody>{kr_rows}</tbody>
             </table>
+        </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -541,62 +704,81 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
     else:
         # FULL VIEW - Original detailed display with all tables and functionality wrapped in frame
+        obj_weight = objective.get('weight', 0)
+        weight_badge = f"<span style='background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:12px; font-weight:600; font-size:12px; margin-left:8px;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
+
         st.markdown(
             f"<div style='background:{THEME['card_bg']}; border:2px solid {THEME['card_border']}; border-radius:10px; padding:16px; margin-bottom:20px; box-shadow:0 4px 8px rgba(0,0,0,0.12);'>",
             unsafe_allow_html=True)
         st.markdown(
-            f"<div style='background:#FFC000; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px;'>📋 {objective['name']}</span><span style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('avg')}: {avg_score:.2f}</span></div>",
+            f"<div style='background:#FFC000; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px;'>📋 {objective['name']}{weight_badge}</span><span style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('weighted_score')}: {avg_score:.2f}</span></div>",
             unsafe_allow_html=True)
 
         with st.expander(f"{objective['name']}", expanded=False):
             col_table, col_gauge = st.columns([3, 1])
 
             with col_table:
-                # Build DataFrame for editable table
-                table_data = []
+                # Build DataFrame for editable table - now with weights and handling qualitative
+                st.markdown(f"##### 📝 {t('edit_manage')}")
+
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
-                    table_data.append({
-                        "KR": f"KR{kr_idx + 1}",
-                        t("key_result"): kr['name'],
-                        t("fact"): kr['actual'],
-                        "Score": result['score'],
-                    })
+                    kr_weight = kr.get('weight', round(100 / len(krs), 1))
 
-                df = pd.DataFrame(table_data)
+                    kr_col1, kr_col2, kr_col3, kr_col4 = st.columns([3, 1, 1, 1])
+                    with kr_col1:
+                        st.markdown(f"**KR{kr_idx + 1}:** {kr['name'][:40]}{'...' if len(kr['name']) > 40 else ''}")
+                    with kr_col2:
+                        st.markdown(
+                            f"<span style='background:#fef3c7; color:#d97706; padding:2px 8px; border-radius:4px; font-size:11px;'>{kr_weight}%</span>",
+                            unsafe_allow_html=True)
+                    with kr_col3:
+                        # Different input based on metric type
+                        if kr['metric_type'] == 'qualitative':
+                            grade_options = ["A", "B", "C", "D", "E"]
+                            current_grade = str(kr.get('actual', 'E')).upper()
+                            if current_grade not in grade_options:
+                                current_grade = "E"
+                            new_grade = st.selectbox(
+                                t("qualitative_grade"),
+                                grade_options,
+                                index=grade_options.index(current_grade),
+                                key=f"grade_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
+                                label_visibility="collapsed"
+                            )
+                            if new_grade != current_grade:
+                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx][
+                                    'actual'] = new_grade
+                                save_data()
+                                st.rerun()
+                        else:
+                            new_actual = st.number_input(
+                                t("fact"),
+                                value=float(kr['actual']),
+                                key=f"actual_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
+                                label_visibility="collapsed"
+                            )
+                            if new_actual != kr['actual']:
+                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx][
+                                    'actual'] = new_actual
+                                save_data()
+                                st.rerun()
+                    with kr_col4:
+                        score_color = result['level_info']['color']
+                        st.markdown(
+                            f"<div style='background:{score_color}; color:white; padding:4px 8px; border-radius:4px; text-align:center; font-weight:bold;'>{result['score']:.2f}</div>",
+                            unsafe_allow_html=True)
 
-                edited_df = st.data_editor(
-                    df,
-                    column_config={
-                        "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
-                        t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True, width="medium"),
-                        t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000, step=1,
-                                                                 format="%.1f"),
-                        "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
-                    },
-                    hide_index=True,
-                    use_container_width=True,
-                    key=f"editor_d{dept_idx}_o{obj_idx}_{objective['id']}"
-                )
-
-                for i, row in edited_df.iterrows():
-                    if i < len(krs):
-                        new_actual = row[t("fact")]
-                        if new_actual != krs[i]['actual']:
-                            st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i][
-                                'actual'] = new_actual
-                            save_data()
-                            st.rerun()
-
-                # Results breakdown table
+                # Results breakdown table with weights
                 st.markdown(f"#### {t('results_breakdown')}")
 
-                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>3.00</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px; background:#d97706;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>3.00</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
-                    th = kr['thresholds']
+                    th = kr.get('thresholds', {})
                     level = result['level']
+                    kr_weight = kr.get('weight', round(100 / len(krs), 1))
 
                     cells = {
                         'below': '' if level != 'below' else 'background:#d9534f; color:white; font-weight:bold;',
@@ -606,22 +788,34 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         'exceptional': '' if level != 'exceptional' else 'background:#1e7b34; color:white; font-weight:bold;',
                     }
 
-                    if kr['metric_type'] == "higher_better":
-                        th_texts = [f"<{th['below']}", f"≥{th['meets']}", f"≥{th['good']}", f"≥{th['very_good']}",
-                                    f"≥{th['exceptional']}"]
+                    # Handle qualitative vs quantitative display
+                    if kr['metric_type'] == 'qualitative':
+                        actual_display = kr.get('actual', 'E')
+                        th_texts = ["E", "D", "C", "B", "A"]
+                    elif kr['metric_type'] == "higher_better":
+                        actual_display = f"{kr['actual']}{kr.get('unit', '')}"
+                        th_texts = [f"<{th.get('below', 0)}", f"≥{th.get('meets', 0)}", f"≥{th.get('good', 0)}",
+                                    f"≥{th.get('very_good', 0)}", f"≥{th.get('exceptional', 0)}"]
                     else:
-                        th_texts = [f">{th['below']}", f"≤{th['meets']}", f"≤{th['good']}", f"≤{th['very_good']}",
-                                    f"≤{th['exceptional']}"]
+                        actual_display = f"{kr['actual']}{kr.get('unit', '')}"
+                        th_texts = [f">{th.get('below', 0)}", f"≤{th.get('meets', 0)}", f"≤{th.get('good', 0)}",
+                                    f"≤{th.get('very_good', 0)}", f"≤{th.get('exceptional', 0)}"]
 
                     row_bg = '#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF'
                     kr_desc = kr.get('description', '') or kr['name']
-                    # Escape quotes in description for HTML attribute
                     kr_desc_escaped = kr_desc.replace('"', '&quot;').replace("'", "&#39;")
 
-                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{kr['actual']}{kr['unit']}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{result['score']:.2f}</td></tr>"
+                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#fef3c7; font-weight:bold; font-size:11px; color:#d97706;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{result['score']:.2f}</td></tr>"
 
-                kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
-                html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='8' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                # Calculate weighted formula display
+                total_kr_weight = sum(kr.get('weight', 0) for kr in krs)
+                if total_kr_weight > 0:
+                    formula_parts = [f"KR{i + 1}×{krs[i].get('weight', 0)}%" for i in range(len(krs))]
+                    kr_formula = " + ".join(formula_parts)
+                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>{t('weighted_score')}: ({kr_formula}) / {total_kr_weight} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                else:
+                    kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
+                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
 
                 table_height = 60 + (len(krs) * 38) + 45
                 components.html(html_table, height=table_height, scrolling=False)
@@ -741,7 +935,7 @@ def load_data():
 
 
 def export_to_excel(departments):
-    """Export OKR data to Excel with color-coded formatting"""
+    """Export OKR data to Excel with color-coded formatting, weights, and qualitative support"""
     wb = Workbook()
     ws = wb.active
     ws.title = "OKR Export"
@@ -758,16 +952,18 @@ def export_to_excel(departments):
     # Define header style
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    weight_fill = PatternFill(start_color='d97706', end_color='d97706', fill_type='solid')
     header_alignment = Alignment(horizontal='center', vertical='center')
 
-    # Add headers
-    headers = [t('department'), t('objective'), t('key_result'), t('actual'), t('unit'), t('below'), t('meets'),
-               t('good'),
+    # Add headers with weights
+    headers = [t('department'), t('objective'), t('objective_weight'), t('key_result'), t('kr_weight'),
+               t('type'), t('actual'), t('unit'), t('below'), t('meets'), t('good'),
                t('very_good'), t('exceptional'), t('score').replace('🎯 ', ''), t('performance_level')]
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
-        cell.fill = header_fill
+        cell.fill = weight_fill if 'weight' in header.lower() or header == t('objective_weight') or header == t(
+            'kr_weight') else header_fill
         cell.alignment = header_alignment
 
     # Add data
@@ -776,29 +972,56 @@ def export_to_excel(departments):
         dept_name = dept['name']
         for obj in dept.get('objectives', []):
             obj_name = obj['name']
+            obj_weight = obj.get('weight', 0)
             start_row = row_idx  # Track starting row for this objective
             kr_list = obj.get('key_results', [])
 
             for kr in kr_list:
                 # Calculate score
-                result = calculate_score(kr['actual'], kr['metric_type'], kr['thresholds'])
+                result = calculate_score(kr['actual'], kr['metric_type'], kr.get('thresholds', {}))
+                kr_weight = kr.get('weight', round(100 / len(kr_list), 1) if kr_list else 0)
+
+                # Determine metric type display
+                if kr['metric_type'] == 'qualitative':
+                    type_display = 'Qualitative (A-E)'
+                    actual_display = kr.get('actual', 'E')
+                elif kr['metric_type'] == 'higher_better':
+                    type_display = '↑ Higher Better'
+                    actual_display = kr['actual']
+                else:
+                    type_display = '↓ Lower Better'
+                    actual_display = kr['actual']
 
                 # Write data (department and objective names only in first row, will be merged later)
                 ws.cell(row=row_idx, column=1, value=dept_name if row_idx == start_row else '')
                 ws.cell(row=row_idx, column=2, value=obj_name if row_idx == start_row else '')
-                ws.cell(row=row_idx, column=3, value=kr['name'])
-                ws.cell(row=row_idx, column=4, value=kr['actual'])
-                ws.cell(row=row_idx, column=5, value=kr['unit'])
-                ws.cell(row=row_idx, column=6, value=kr['thresholds']['below'])
-                ws.cell(row=row_idx, column=7, value=kr['thresholds']['meets'])
-                ws.cell(row=row_idx, column=8, value=kr['thresholds']['good'])
-                ws.cell(row=row_idx, column=9, value=kr['thresholds']['very_good'])
-                ws.cell(row=row_idx, column=10, value=kr['thresholds']['exceptional'])
-                ws.cell(row=row_idx, column=11, value=result['score'])
-                ws.cell(row=row_idx, column=12, value=get_level_label(result['level']))
+                ws.cell(row=row_idx, column=3, value=f"{obj_weight}%" if row_idx == start_row else '')
+                ws.cell(row=row_idx, column=4, value=kr['name'])
+                ws.cell(row=row_idx, column=5, value=f"{kr_weight}%")
+                ws.cell(row=row_idx, column=6, value=type_display)
+                ws.cell(row=row_idx, column=7, value=actual_display)
+                ws.cell(row=row_idx, column=8, value=kr.get('unit', ''))
+
+                # Thresholds (show N/A for qualitative)
+                th = kr.get('thresholds', {})
+                if kr['metric_type'] == 'qualitative':
+                    ws.cell(row=row_idx, column=9, value='E')
+                    ws.cell(row=row_idx, column=10, value='D')
+                    ws.cell(row=row_idx, column=11, value='C')
+                    ws.cell(row=row_idx, column=12, value='B')
+                    ws.cell(row=row_idx, column=13, value='A')
+                else:
+                    ws.cell(row=row_idx, column=9, value=th.get('below', 0))
+                    ws.cell(row=row_idx, column=10, value=th.get('meets', 0))
+                    ws.cell(row=row_idx, column=11, value=th.get('good', 0))
+                    ws.cell(row=row_idx, column=12, value=th.get('very_good', 0))
+                    ws.cell(row=row_idx, column=13, value=th.get('exceptional', 0))
+
+                ws.cell(row=row_idx, column=14, value=result['score'])
+                ws.cell(row=row_idx, column=15, value=get_level_label(result['level']))
 
                 # Apply color formatting to performance level cell
-                level_cell = ws.cell(row=row_idx, column=12)
+                level_cell = ws.cell(row=row_idx, column=15)
                 level_cell.fill = PatternFill(start_color=colors[result['level']],
                                               end_color=colors[result['level']],
                                               fill_type='solid')
@@ -806,12 +1029,21 @@ def export_to_excel(departments):
                 level_cell.alignment = Alignment(horizontal='center', vertical='center')
 
                 # Apply color formatting to score cell
-                score_cell = ws.cell(row=row_idx, column=11)
+                score_cell = ws.cell(row=row_idx, column=14)
                 score_cell.fill = PatternFill(start_color=colors[result['level']],
                                               end_color=colors[result['level']],
                                               fill_type='solid')
                 score_cell.font = Font(bold=True, color='FFFFFF')
                 score_cell.alignment = Alignment(horizontal='center', vertical='center')
+
+                # Apply weight column styling
+                obj_weight_cell = ws.cell(row=row_idx, column=3)
+                obj_weight_cell.fill = PatternFill(start_color='fef3c7', end_color='fef3c7', fill_type='solid')
+                obj_weight_cell.font = Font(bold=True, color='d97706')
+
+                kr_weight_cell = ws.cell(row=row_idx, column=5)
+                kr_weight_cell.fill = PatternFill(start_color='fef3c7', end_color='fef3c7', fill_type='solid')
+                kr_weight_cell.font = Font(bold=True, color='d97706')
 
                 row_idx += 1
 
@@ -822,6 +1054,8 @@ def export_to_excel(departments):
                 ws.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
                 # Merge objective name
                 ws.merge_cells(start_row=start_row, start_column=2, end_row=end_row, end_column=2)
+                # Merge objective weight
+                ws.merge_cells(start_row=start_row, start_column=3, end_row=end_row, end_column=3)
 
             # Apply formatting to department and objective cells
             dept_cell = ws.cell(row=start_row, column=1)
@@ -835,7 +1069,7 @@ def export_to_excel(departments):
             # Add darker border after each objective (bottom of last row)
             end_row = row_idx - 1
             thick_bottom = Side(style='medium', color='000000')
-            for col in range(1, 13):  # Columns A to L
+            for col in range(1, 16):  # Columns A to O (15 columns now)
                 cell = ws.cell(row=end_row, column=col)
                 # Preserve existing borders and add thick bottom
                 cell.border = Border(
@@ -845,19 +1079,22 @@ def export_to_excel(departments):
                     bottom=thick_bottom
                 )
 
-    # Adjust column widths
-    ws.column_dimensions['A'].width = 25  # Department
+    # Adjust column widths for new structure
+    ws.column_dimensions['A'].width = 20  # Department
     ws.column_dimensions['B'].width = 30  # Objective
-    ws.column_dimensions['C'].width = 30  # Key Result
-    ws.column_dimensions['D'].width = 10  # Actual
-    ws.column_dimensions['E'].width = 8  # Unit
-    ws.column_dimensions['F'].width = 10  # Below
-    ws.column_dimensions['G'].width = 10  # Meets
-    ws.column_dimensions['H'].width = 15  # Good
-    ws.column_dimensions['I'].width = 15  # Very Good
-    ws.column_dimensions['J'].width = 10  # Exceptional
-    ws.column_dimensions['K'].width = 10  # Score
-    ws.column_dimensions['L'].width = 20  # Performance Level
+    ws.column_dimensions['C'].width = 12  # Objective Weight
+    ws.column_dimensions['D'].width = 35  # Key Result
+    ws.column_dimensions['E'].width = 10  # KR Weight
+    ws.column_dimensions['F'].width = 15  # Type
+    ws.column_dimensions['G'].width = 10  # Actual
+    ws.column_dimensions['H'].width = 8  # Unit
+    ws.column_dimensions['I'].width = 10  # Below
+    ws.column_dimensions['J'].width = 10  # Meets
+    ws.column_dimensions['K'].width = 10  # Good
+    ws.column_dimensions['L'].width = 12  # Very Good
+    ws.column_dimensions['M'].width = 12  # Exceptional
+    ws.column_dimensions['N'].width = 10  # Score
+    ws.column_dimensions['O'].width = 18  # Performance Level
 
     # Save to BytesIO
     output = BytesIO()
@@ -870,12 +1107,24 @@ def inject_global_css():
     """Inject custom CSS for professional enterprise appearance"""
     st.markdown("""
     <style>
+    /* Import professional fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    /* Global font and background */
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .main {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+
     /* Remove default Streamlit padding - reduced top space */
     .main .block-container {
         padding-top: 0.5rem;
         padding-bottom: 0rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
         max-width: 100%;
     }
 
@@ -884,22 +1133,115 @@ def inject_global_css():
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Reduce expander header padding */
+    /* Professional buttons */
+    .stButton>button {
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        border-radius: 8px;
+        border: 1px solid #e4e7ec;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .stButton>button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .stButton>button[kind="primary"] {
+        background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+        border: none;
+        color: white;
+    }
+
+    /* Download button styling */
+    .stDownloadButton>button {
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        border: none;
+        color: white;
+        transition: all 0.2s ease;
+    }
+
+    .stDownloadButton>button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+    }
+
+    /* Expander styling */
     .streamlit-expanderHeader {
-        padding-top: 0.25rem;
-        padding-bottom: 0.25rem;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e4e7ec;
+    }
+
+    .streamlit-expanderContent {
+        border: 1px solid #e4e7ec;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        background: white;
+    }
+
+    /* Input fields */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
+        font-family: 'Inter', sans-serif;
+        border-radius: 8px;
+        border: 1px solid #e4e7ec;
+    }
+
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
+        border-color: #0066cc;
+        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    /* Radio buttons */
+    .stRadio>div {
+        background: white;
+        padding: 0.5rem;
+        border-radius: 8px;
+        border: 1px solid #e4e7ec;
+    }
+
+    /* Metrics and stats cards */
+    [data-testid="stMetricValue"] {
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
     }
 
     /* Custom scrollbar */
-    .sidebar-container::-webkit-scrollbar {
+    ::-webkit-scrollbar {
         width: 8px;
+        height: 8px;
     }
-    .sidebar-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-    .sidebar-container::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
+    ::-webkit-scrollbar-track {
+        background: #f1f5f9;
         border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* Divider styling */
+    hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #e4e7ec, transparent);
+        margin: 1rem 0;
+    }
+
+    /* Alert/warning styling */
+    .stAlert {
+        border-radius: 8px;
+        border: none;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -921,14 +1263,22 @@ def main():
     col_header, col_lang = st.columns([5, 1])
     with col_header:
         st.markdown(f"""
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-            <span style="font-size:28px;">🎯</span>
-            <h1 style="margin:0; font-size:22px; color:{THEME['text_primary']}; font-weight:600;">
-                {t("title")}
-            </h1>
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; padding:16px 20px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); border-radius:12px; box-shadow:0 4px 16px rgba(26,54,93,0.2);">
+            <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:10px;">
+                <span style="font-size:32px;">🎯</span>
+            </div>
+            <div>
+                <h1 style="margin:0; font-size:24px; color:white; font-weight:700; letter-spacing:-0.5px;">
+                    {t("title")}
+                </h1>
+                <p style="margin:4px 0 0 0; font-size:13px; color:rgba(255,255,255,0.75); font-weight:400;">
+                    Enterprise Performance Management System
+                </p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     with col_lang:
+        st.markdown("<div style='padding-top:20px;'>", unsafe_allow_html=True)
         lang_options = {"en": "🇬🇧 EN", "ru": "🇷🇺 RU", "uz": "🇺🇿 UZ"}
         selected_lang = st.selectbox("", list(lang_options.keys()),
                                      format_func=lambda x: lang_options[x],
@@ -938,8 +1288,7 @@ def main():
             st.session_state.language = selected_lang
             save_data()
             st.rerun()
-
-    st.markdown(f"<hr style='margin:5px 0; border:1px solid {THEME['card_border']};'>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # ===== SIDEBAR TOGGLE =====
     if 'sidebar_collapsed' not in st.session_state:
@@ -1032,37 +1381,15 @@ def main():
                 else:
                     st.warning(t("no_data"))
 
-            # Export buttons
-            col_json, col_excel = st.columns(2)
-            with col_json:
-                if st.button("📄", use_container_width=True, help=t("export_json")):
-                    export = []
-                    for dept in st.session_state.departments:
-                        dept_data = {"department": dept['name'], "objectives": []}
-                        for obj in dept.get('objectives', []):
-                            obj_data = {"objective": obj['name'], "key_results": []}
-                            scores = []
-                            for kr in obj['key_results']:
-                                res = calculate_score(kr['actual'], kr['metric_type'], kr['thresholds'])
-                                scores.append(res['score'])
-                                obj_data['key_results'].append({"name": kr['name'], "actual": kr['actual'],
-                                                                "score": res['score'], "level": res['level']})
-                            obj_data['average'] = round(sum(scores) / len(scores), 2) if scores else 0
-                            obj_data['percentage'] = score_to_percentage(obj_data['average'])
-                            dept_data['objectives'].append(obj_data)
-                        export.append(dept_data)
-                    st.json(export)
-
-            with col_excel:
-                excel_data = export_to_excel(st.session_state.departments)
-                st.download_button(
-                    label="📊",
-                    data=excel_data,
-                    file_name="okr_export.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
-                    help=t("export_excel")
-                )
+            # Export button - Excel only
+            excel_data = export_to_excel(st.session_state.departments)
+            st.download_button(
+                label="📊 " + t("export_excel"),
+                data=excel_data,
+                file_name="okr_export.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
 
             # Close sidebar container
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1070,19 +1397,27 @@ def main():
     with col_main:
         # === MAIN DASHBOARD AREA ===
 
-        # Performance scale legend (compact, always visible)
-        st.markdown(f"<p style='font-size:14px; font-weight:600; margin-bottom:8px;'>📊 {t('performance_scale')}</p>",
-                    unsafe_allow_html=True)
+        # Performance scale legend (professional card design)
+        st.markdown(f"""
+            <div style='background:white; border-radius:12px; padding:16px 20px; margin-bottom:20px; border:1px solid {THEME['card_border']}; box-shadow:0 2px 8px rgba(0,0,0,0.04);'>
+                <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'>📊 {t('performance_scale')}</p>
+                <div style='display:flex; gap:8px; flex-wrap:wrap;'>
+        """, unsafe_allow_html=True)
+
         cols = st.columns(5)
         for i, key in enumerate(["below", "meets", "good", "very_good", "exceptional"]):
             level = LEVELS[key]
             with cols[i]:
                 pct_range = f"{score_to_percentage(level['min'])}%-{score_to_percentage(level['max'])}%"
-                st.markdown(
-                    f"<div style='background:{level['color']}; color:white; padding:6px 8px; border-radius:4px; text-align:center; font-size:12px;'><b>{get_level_label(key)}</b><br><small style='font-size:10px;'>{level['min']:.2f}-{level['max']:.2f}</small><br><small style='font-size:10px;'>({pct_range})</small></div>",
-                    unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div style='background:linear-gradient(135deg, {level['color']} 0%, {level['color']}dd 100%); color:white; padding:12px 10px; border-radius:10px; text-align:center; box-shadow:0 2px 8px {level['color']}30;'>
+                        <div style='font-size:12px; font-weight:700; margin-bottom:4px;'>{get_level_label(key)}</div>
+                        <div style='font-size:11px; opacity:0.9;'>{level['min']:.2f} - {level['max']:.2f}</div>
+                        <div style='font-size:10px; opacity:0.75; margin-top:2px;'>{pct_range}</div>
+                    </div>
+                """, unsafe_allow_html=True)
 
-        st.markdown("---")
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
         # ===== CREATE DEPARTMENT =====
         with st.expander(t("create_department"), expanded=len(st.session_state.departments) == 0):
@@ -1115,61 +1450,91 @@ def main():
                     key="selected_dept_for_obj"
                 )
 
-                new_obj_name = st.text_input(t("objective_name"), key="new_obj_name")
+                # Objective name and weight
+                obj_col1, obj_col2 = st.columns([4, 1])
+                with obj_col1:
+                    new_obj_name = st.text_input(t("objective_name"), key="new_obj_name")
+                with obj_col2:
+                    new_obj_weight = st.number_input(t("objective_weight"), min_value=0, max_value=100, value=0,
+                                                     key="new_obj_weight",
+                                                     help="Weight of this objective within department (0-100%)")
 
                 st.markdown(f"#### {t('add_key_results')}")
-                c1, c2, c3 = st.columns([3, 2, 1])
+
+                # KR basic info with weight
+                c1, c2, c3, c4 = st.columns([3, 1.5, 1, 1])
                 with c1:
                     kr_name = st.text_input(t("kr_name"), key="kr_name_input")
                 with c2:
-                    kr_type = st.selectbox(t("type"), ["higher_better", "lower_better"],
-                                           format_func=lambda x: t("higher_better") if x == "higher_better" else t(
-                                               "lower_better"),
+                    kr_type = st.selectbox(t("type"), ["higher_better", "lower_better", "qualitative"],
+                                           format_func=lambda x: t(x),
                                            key="kr_type_input")
                 with c3:
-                    kr_unit = st.text_input(t("unit"), value="%", key="kr_unit_input")
+                    kr_unit = st.text_input(t("unit"), value="%" if kr_type != "qualitative" else "",
+                                            key="kr_unit_input",
+                                            disabled=(kr_type == "qualitative"))
+                with c4:
+                    kr_weight = st.number_input(t("kr_weight"), min_value=0, max_value=100, value=0,
+                                                key="kr_weight_input", help="Weight within objective (0-100%)")
 
                 # Description field for tooltip
                 kr_description = st.text_area(t("kr_description"), placeholder=t("kr_description_placeholder"),
                                               key="kr_description_input", height=68)
 
-                st.markdown(f"**{t('thresholds')}:**")
-                t1, t2, t3, t4, t5 = st.columns(5)
-                with t1:
-                    st.markdown(f"<small style='color:#d9534f;'>● 3.00</small>", unsafe_allow_html=True)
-                    th_below = st.number_input(t("below"), value=0.0, key="th_below")
-                with t2:
-                    st.markdown(f"<small style='color:#f0ad4e;'>● 4.25</small>", unsafe_allow_html=True)
-                    th_meets = st.number_input(t("meets"), value=60.0, key="th_meets")
-                with t3:
-                    st.markdown(f"<small style='color:#5cb85c;'>● 4.50</small>", unsafe_allow_html=True)
-                    th_good = st.number_input(t("good"), value=75.0, key="th_good")
-                with t4:
-                    st.markdown(f"<small style='color:#28a745;'>● 4.75</small>", unsafe_allow_html=True)
-                    th_very_good = st.number_input(t("very_good"), value=90.0, key="th_very_good")
-                with t5:
-                    st.markdown(f"<small style='color:#1e7b34;'>● 5.00</small>", unsafe_allow_html=True)
-                    th_exceptional = st.number_input(t("exceptional"), value=100.0, key="th_exceptional")
+                # Show thresholds only for quantitative metrics
+                if kr_type != "qualitative":
+                    st.markdown(f"**{t('thresholds')}:**")
+                    t1, t2, t3, t4, t5 = st.columns(5)
+                    with t1:
+                        st.markdown(f"<small style='color:#d9534f;'>● 3.00</small>", unsafe_allow_html=True)
+                        th_below = st.number_input(t("below"), value=0.0, key="th_below")
+                    with t2:
+                        st.markdown(f"<small style='color:#f0ad4e;'>● 4.25</small>", unsafe_allow_html=True)
+                        th_meets = st.number_input(t("meets"), value=60.0, key="th_meets")
+                    with t3:
+                        st.markdown(f"<small style='color:#5cb85c;'>● 4.50</small>", unsafe_allow_html=True)
+                        th_good = st.number_input(t("good"), value=75.0, key="th_good")
+                    with t4:
+                        st.markdown(f"<small style='color:#28a745;'>● 4.75</small>", unsafe_allow_html=True)
+                        th_very_good = st.number_input(t("very_good"), value=90.0, key="th_very_good")
+                    with t5:
+                        st.markdown(f"<small style='color:#1e7b34;'>● 5.00</small>", unsafe_allow_html=True)
+                        th_exceptional = st.number_input(t("exceptional"), value=100.0, key="th_exceptional")
+                else:
+                    st.info(
+                        "📊 Qualitative KRs use A/B/C/D/E grades: A=5.0 (Exceptional), B=4.75 (Very Good), C=4.50 (Good), D=4.25 (Meets), E=3.0 (Below)")
+                    th_below, th_meets, th_good, th_very_good, th_exceptional = 0, 0, 0, 0, 0
 
                 if st.button(t("add_kr")):
                     if kr_name.strip():
                         st.session_state.new_krs.append({
                             "id": str(uuid.uuid4()), "name": kr_name.strip(), "metric_type": kr_type,
-                            "unit": kr_unit, "description": kr_description.strip(),
+                            "unit": "" if kr_type == "qualitative" else kr_unit,
+                            "description": kr_description.strip(),
+                            "weight": kr_weight,
                             "thresholds": {"below": th_below, "meets": th_meets,
                                            "good": th_good, "very_good": th_very_good,
                                            "exceptional": th_exceptional},
-                            "actual": 0.0
+                            "actual": "E" if kr_type == "qualitative" else 0.0
                         })
                         st.rerun()
 
                 if st.session_state.new_krs:
                     st.markdown(f"**{t('added_krs')}:**")
+                    # Calculate total weight
+                    total_kr_weight = sum(kr.get('weight', 0) for kr in st.session_state.new_krs)
+                    if total_kr_weight > 0 and total_kr_weight != 100:
+                        st.warning(f"{t('weights_warning')} ({t('weights_total')}: {total_kr_weight}%)")
+
                     for i, kr in enumerate(st.session_state.new_krs):
-                        col1, col2 = st.columns([5, 1])
+                        col1, col2, col3 = st.columns([4, 1, 1])
                         with col1:
-                            icon = "↑" if kr['metric_type'] == "higher_better" else "↓"
-                            st.write(f"**KR{i + 1}: {kr['name']}** ({icon})")
+                            if kr['metric_type'] == "qualitative":
+                                icon = "📊"
+                            else:
+                                icon = "↑" if kr['metric_type'] == "higher_better" else "↓"
+                            weight_str = f" [{kr.get('weight', 0)}%]" if kr.get('weight', 0) > 0 else ""
+                            st.write(f"**KR{i + 1}: {kr['name']}** ({icon}){weight_str}")
                         with col2:
                             if st.button(f"❌", key=f"rm_{kr['id']}"):
                                 st.session_state.new_krs = [k for k in st.session_state.new_krs if k['id'] != kr['id']]
@@ -1182,6 +1547,7 @@ def main():
                             if dept['id'] == selected_dept_id:
                                 dept['objectives'].append({
                                     "id": str(uuid.uuid4()), "name": new_obj_name.strip(),
+                                    "weight": new_obj_weight,
                                     "key_results": st.session_state.new_krs.copy()
                                 })
                                 break
@@ -1281,18 +1647,18 @@ def main():
                             "key_results": [
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR1.1 Проекты завершенные в срок (% от кол-ва проектов)",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 40,
                                  "description": "Процент проектов, которые были завершены в установленные сроки. Измеряется как отношение количества проектов, завершенных вовремя, к общему количеству проектов.",
                                  "thresholds": {"below": 50, "meets": 60, "good": 80, "very_good": 100,
                                                 "exceptional": 120}, "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR1.2 Задачи в JIRA, завершенные в срок (%)",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 35,
                                  "description": "Процент задач в системе JIRA, выполненных в установленные сроки без переносов дедлайнов.",
                                  "thresholds": {"below": 50, "meets": 65, "good": 95, "very_good": 100,
                                                 "exceptional": 200}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR1.3 Переносы сроков заверш задач в JIRA (% от общего кол-ва)",
-                                 "metric_type": "lower_better", "unit": "%",
+                                 "metric_type": "lower_better", "unit": "%", "weight": 25,
                                  "description": "Процент задач, у которых были перенесены сроки выполнения. Чем меньше значение, тем лучше.",
                                  "thresholds": {"below": 30, "meets": 20, "good": 15, "very_good": 5, "exceptional": 0},
                                  "actual": 0},
@@ -1305,20 +1671,20 @@ def main():
                             "weight": 20,
                             "key_results": [
                                 {"id": str(uuid.uuid4()), "name": "KR2.1 Проекты в рамках бюджетов (% без превышения)",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 30,
                                  "thresholds": {"below": 50, "meets": 60, "good": 75, "very_good": 90,
                                                 "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR2.2 Неучтенные риски возникшие после начала проекта (кол-во)",
-                                 "metric_type": "lower_better", "unit": "",
+                                 "metric_type": "lower_better", "unit": "", "weight": 25,
                                  "thresholds": {"below": 10, "meets": 5, "good": 2, "very_good": 1, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR2.3 Повысить точность оценки трудозатрат до 75%",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 25,
                                  "thresholds": {"below": 50, "meets": 75, "good": 80, "very_good": 85,
                                                 "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR2.4 Процент рисков с планами митигации (%)",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 20,
                                  "thresholds": {"below": 20, "meets": 50, "good": 60, "very_good": 80,
                                                 "exceptional": 100}, "actual": 0},
                             ]
@@ -1331,27 +1697,27 @@ def main():
                             "key_results": [
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.1 Своевременность отчетов W,Q,Y, другие (задержка, дней)",
-                                 "metric_type": "lower_better", "unit": " дней",
+                                 "metric_type": "lower_better", "unit": " дней", "weight": 25,
                                  "thresholds": {"below": 5, "meets": 3, "good": 2, "very_good": 1, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.2 Уровень использования ресурсов (resource utilization) %",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 25,
                                  "thresholds": {"below": 75, "meets": 85, "good": 90, "very_good": 95,
                                                 "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.3 Реагирование на изменения (Response time to changes) часы",
-                                 "metric_type": "lower_better", "unit": " часов",
+                                 "metric_type": "lower_better", "unit": " часов", "weight": 25,
                                  "thresholds": {"below": 5, "meets": 3, "good": 2, "very_good": 1, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.4 Среднее время от инициации до завершения проекта (нед)",
-                                 "metric_type": "lower_better", "unit": " нед",
+                                 "metric_type": "lower_better", "unit": " нед", "weight": 25,
                                  "thresholds": {"below": 10, "meets": 8, "good": 6, "very_good": 5, "exceptional": 4},
                                  "actual": 0},
                             ]
                         },
-                        # Цель 4: Усиление состава и человеческий капитал (10%)
+                        # Цель 4: Усиление состава и человеческий капитал (10%) - includes qualitative KR
                         {
                             "id": str(uuid.uuid4()),
                             "name": "Цель 4: Усиление состава и человеческий капитал",
@@ -1359,17 +1725,18 @@ def main():
                             "key_results": [
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR4.1 Комплектация штата (6 свободных вакансий в штате)",
-                                 "metric_type": "higher_better", "unit": "",
+                                 "metric_type": "higher_better", "unit": "", "weight": 35,
                                  "thresholds": {"below": 2, "meets": 3, "good": 4, "very_good": 5, "exceptional": 6},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR4.2 Набор и подготовка стажеров (16 вакансий)",
-                                 "metric_type": "higher_better", "unit": "",
+                                 "metric_type": "higher_better", "unit": "", "weight": 35,
                                  "thresholds": {"below": 3, "meets": 6, "good": 10, "very_good": 12, "exceptional": 16},
                                  "actual": 0},
-                                {"id": str(uuid.uuid4()), "name": "KR4.3 % сотрудников с ростом оклада, должности",
-                                 "metric_type": "higher_better", "unit": "%",
-                                 "thresholds": {"below": 0, "meets": 10, "good": 20, "very_good": 30,
-                                                "exceptional": 40}, "actual": 0},
+                                {"id": str(uuid.uuid4()), "name": "KR4.3 Качество развития сотрудников (оценка)",
+                                 "metric_type": "qualitative", "unit": "", "weight": 30,
+                                 "description": "Качественная оценка программы развития сотрудников. A=Отлично, B=Очень хорошо, C=Хорошо, D=Удовлетворительно, E=Неудовлетворительно",
+                                 "thresholds": {"below": 0, "meets": 0, "good": 0, "very_good": 0, "exceptional": 0},
+                                 "actual": "C"},
                             ]
                         },
                         # Цель 5: Улучшение продуктов (10%)
@@ -1380,22 +1747,22 @@ def main():
                             "key_results": [
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.1 Увеличить долю проектов, связанных со стратегическими целями Банка, до 85%",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 30,
                                  "thresholds": {"below": 75, "meets": 85, "good": 90, "very_good": 95,
                                                 "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.2 % продуктов с повторными багами (Defect/error rate)",
-                                 "metric_type": "lower_better", "unit": "%",
+                                 "metric_type": "lower_better", "unit": "%", "weight": 30,
                                  "thresholds": {"below": 20, "meets": 15, "good": 10, "very_good": 5, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.3 Обеспечить участие 100% членов команды в обучении по Agile/Scrum",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 20,
                                  "thresholds": {"below": 80, "meets": 90, "good": 95, "very_good": 100,
                                                 "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.4 Провести 6 внутренних воркшопов по методологиям и новым технологиям",
-                                 "metric_type": "higher_better", "unit": "",
+                                 "metric_type": "higher_better", "unit": "", "weight": 20,
                                  "thresholds": {"below": 4, "meets": 6, "good": 7, "very_good": 8, "exceptional": 9},
                                  "actual": 0},
                             ]
@@ -1408,17 +1775,17 @@ def main():
                             "key_results": [
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR6.1 Уровень автоматизации процессов проектного управления",
-                                 "metric_type": "higher_better", "unit": "%",
+                                 "metric_type": "higher_better", "unit": "%", "weight": 40,
                                  "thresholds": {"below": 75, "meets": 85, "good": 90, "very_good": 95,
                                                 "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR6.2 Качество описание бизнес процессов (изменение BPMN) %",
-                                 "metric_type": "lower_better", "unit": "%",
+                                 "metric_type": "lower_better", "unit": "%", "weight": 30,
                                  "thresholds": {"below": 20, "meets": 15, "good": 10, "very_good": 5, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR6.3 Процент изменений плана проекта после планирования",
-                                 "metric_type": "lower_better", "unit": "%",
+                                 "metric_type": "lower_better", "unit": "%", "weight": 30,
                                  "thresholds": {"below": 20, "meets": 15, "good": 10, "very_good": 5, "exceptional": 0},
                                  "actual": 0},
                             ]
