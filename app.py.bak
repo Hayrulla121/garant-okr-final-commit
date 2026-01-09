@@ -1,0 +1,471 @@
+import streamlit as st
+import plotly.graph_objects as go
+import pandas as pd
+import uuid
+
+# Performance levels
+LEVELS = {
+    "below": {"min": 3.00, "max": 4.24, "label": "Ёмон", "label_en": "Below", "color": "#d9534f"},
+    "meets": {"min": 4.25, "max": 4.50, "label": "Кутилган", "label_en": "Meets", "color": "#f0ad4e"},
+    "outstanding": {"min": 4.51, "max": 4.74, "label": "Зўр", "label_en": "Outstanding", "color": "#5cb85c"},
+    "exceptional": {"min": 4.75, "max": 5.00, "label": "Фантастик", "label_en": "Exceptional", "color": "#28a745"},
+}
+
+
+def calculate_score(actual: float, metric_type: str, thresholds: dict) -> dict:
+    """Calculate score based on thresholds."""
+    below_th = thresholds['below']
+    meets_th = thresholds['meets']
+    outstanding_th = thresholds['outstanding']
+    exceptional_th = thresholds['exceptional']
+
+    if metric_type == "higher_better":
+        if actual >= exceptional_th:
+            score = 4.75 + min((actual - exceptional_th) / max((100 - exceptional_th), 1) * 0.25, 0.25)
+            level = "exceptional"
+        elif actual >= outstanding_th:
+            ratio = (actual - outstanding_th) / max((exceptional_th - outstanding_th), 1)
+            score = 4.51 + ratio * 0.23
+            level = "outstanding"
+        elif actual >= meets_th:
+            ratio = (actual - meets_th) / max((outstanding_th - meets_th), 1)
+            score = 4.25 + ratio * 0.25
+            level = "meets"
+        elif actual >= below_th:
+            ratio = (actual - below_th) / max((meets_th - below_th), 1)
+            score = 3.00 + ratio * 1.24
+            level = "below"
+        else:
+            score = 3.00
+            level = "below"
+    else:
+        # Lower is better
+        if actual <= exceptional_th:
+            score = 5.00
+            level = "exceptional"
+        elif actual <= outstanding_th:
+            ratio = 1 - (actual - exceptional_th) / max((outstanding_th - exceptional_th), 1)
+            score = 4.51 + ratio * 0.23
+            level = "outstanding"
+        elif actual <= meets_th:
+            ratio = 1 - (actual - outstanding_th) / max((meets_th - outstanding_th), 1)
+            score = 4.25 + ratio * 0.25
+            level = "meets"
+        elif actual <= below_th:
+            ratio = 1 - (actual - meets_th) / max((below_th - meets_th), 1)
+            score = 3.00 + ratio * 1.24
+            level = "below"
+        else:
+            score = 3.00
+            level = "below"
+
+    return {"score": round(min(max(score, 3.0), 5.0), 2), "level": level, "level_info": LEVELS[level]}
+
+
+def create_gauge(score: float) -> go.Figure:
+    """Create speedometer gauge."""
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        number={'font': {'size': 48}, 'valueformat': '.2f'},
+        gauge={
+            'axis': {'range': [3.0, 5.0], 'tickvals': [3.0, 4.25, 4.5, 4.75, 5.0]},
+            'bar': {'color': "darkblue", 'thickness': 0.15},
+            'steps': [
+                {'range': [3.0, 4.25], 'color': '#d9534f'},
+                {'range': [4.25, 4.50], 'color': '#f0ad4e'},
+                {'range': [4.50, 4.75], 'color': '#5cb85c'},
+                {'range': [4.75, 5.0], 'color': '#28a745'},
+            ],
+        }
+    ))
+    fig.update_layout(height=280, margin=dict(l=30, r=30, t=50, b=30))
+    return fig
+
+
+def get_level_for_score(score: float) -> dict:
+    """Get level info for a score."""
+    if score >= 4.75:
+        return LEVELS['exceptional']
+    elif score >= 4.51:
+        return LEVELS['outstanding']
+    elif score >= 4.25:
+        return LEVELS['meets']
+    else:
+        return LEVELS['below']
+
+
+def main():
+    st.set_page_config(page_title="OKR Tracker", page_icon="🎯", layout="wide")
+
+    # Custom CSS for better styling
+    st.markdown("""
+    <style>
+        .stDataFrame { font-size: 14px; }
+        div[data-testid="stDataFrameResizable"] { border: 2px solid #4472C4; border-radius: 8px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Initialize
+    if 'objectives' not in st.session_state:
+        st.session_state.objectives = []
+    if 'new_krs' not in st.session_state:
+        st.session_state.new_krs = []
+
+    st.title("🎯 OKR Performance Tracker")
+
+    # Legend
+    st.markdown("### 📊 Performance Scale")
+    cols = st.columns(4)
+    for i, (key, level) in enumerate(LEVELS.items()):
+        with cols[i]:
+            st.markdown(f'''
+            <div style="background:{level['color']}; color:white; padding:12px; border-radius:8px; text-align:center;">
+                <b style="font-size:18px;">{level['label']}</b><br>
+                <span>{level['label_en']}</span><br>
+                <small>{level['min']:.2f} - {level['max']:.2f}</small>
+            </div>
+            ''', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ===== ADD NEW OBJECTIVE =====
+    with st.expander("➕ Create New Objective", expanded=len(st.session_state.objectives) == 0):
+        new_obj_name = st.text_input("Objective Name", placeholder="e.g., Improve Code Quality", key="new_obj_name")
+
+        st.markdown("#### Add Key Results")
+
+        c1, c2, c3 = st.columns([3, 2, 1])
+        with c1:
+            kr_name = st.text_input("KR Name", placeholder="e.g., Tasks in time", key="kr_name_input")
+        with c2:
+            kr_type = st.selectbox("Type", ["higher_better", "lower_better"],
+                                   format_func=lambda
+                                       x: "↑ Higher is better" if x == "higher_better" else "↓ Lower is better",
+                                   key="kr_type_input")
+        with c3:
+            kr_unit = st.text_input("Unit", value="%", key="kr_unit_input")
+
+        st.markdown("**Thresholds:**")
+        t1, t2, t3, t4 = st.columns(4)
+        with t1:
+            th_below = st.number_input("Below (<)" if kr_type == "higher_better" else "Below (>)",
+                                       value=60.0, key="th_below")
+        with t2:
+            th_meets = st.number_input("Meets (≥)" if kr_type == "higher_better" else "Meets (≤)",
+                                       value=80.0, key="th_meets")
+        with t3:
+            th_outstanding = st.number_input("Outstanding (≥)" if kr_type == "higher_better" else "Outstanding (≤)",
+                                             value=85.0, key="th_outstanding")
+        with t4:
+            th_exceptional = st.number_input("Exceptional (≥)" if kr_type == "higher_better" else "Exceptional (≤)",
+                                             value=90.0, key="th_exceptional")
+
+        if st.button("➕ Add KR", key="add_kr_btn"):
+            if kr_name.strip():
+                st.session_state.new_krs.append({
+                    "id": str(uuid.uuid4()),
+                    "name": kr_name.strip(),
+                    "metric_type": kr_type,
+                    "unit": kr_unit,
+                    "thresholds": {"below": th_below, "meets": th_meets,
+                                   "outstanding": th_outstanding, "exceptional": th_exceptional},
+                    "actual": 0.0
+                })
+                st.rerun()
+
+        # Show added KRs
+        if st.session_state.new_krs:
+            st.markdown("**Added Key Results:**")
+            for i, kr in enumerate(st.session_state.new_krs):
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    icon = "↑" if kr['metric_type'] == "higher_better" else "↓"
+                    th = kr['thresholds']
+                    st.write(
+                        f"**KR{i + 1}: {kr['name']}** ({icon}) — B:{th['below']}, M:{th['meets']}, O:{th['outstanding']}, E:{th['exceptional']}")
+                with col2:
+                    if st.button("❌", key=f"rm_new_kr_{kr['id']}"):
+                        st.session_state.new_krs = [k for k in st.session_state.new_krs if k['id'] != kr['id']]
+                        st.rerun()
+
+        st.markdown("---")
+        if st.button("✅ Create Objective", type="primary"):
+            if new_obj_name.strip() and st.session_state.new_krs:
+                st.session_state.objectives.append({
+                    "id": str(uuid.uuid4()),
+                    "name": new_obj_name.strip(),
+                    "key_results": st.session_state.new_krs.copy()
+                })
+                st.session_state.new_krs = []
+                st.rerun()
+            else:
+                st.error("Enter objective name and add at least one KR")
+
+    st.markdown("---")
+
+    # ===== DISPLAY OBJECTIVES WITH EDITABLE TABLE =====
+    if st.session_state.objectives:
+        for obj_idx, objective in enumerate(st.session_state.objectives):
+            st.markdown(f"## 🎯 {objective['name']}")
+
+            krs = objective['key_results']
+
+            if not krs:
+                st.warning("No Key Results. Add some below.")
+                continue
+
+            # Build DataFrame for the table
+            table_data = []
+            for kr_idx, kr in enumerate(krs):
+                th = kr['thresholds']
+                result = calculate_score(kr['actual'], kr['metric_type'], kr['thresholds'])
+
+                if kr['metric_type'] == "higher_better":
+                    th_str = f"<{th['below]}|≥{th['meets']}|≥{th['outstanding']}|≥{th['exceptional']}"
+                else:
+                    th_str = f">{th['below']}|≤{th['meets']}|≤{th['outstanding']}|≤{th['exceptional']}"
+
+                table_data.append({
+                    "KR": f"KR{kr_idx + 1}",
+                    "Key Result": kr['name'],
+                    "Fact": kr['actual'],
+                    f"Ёмон (<{th['below']})": "●" if result['level'] == 'below' else "",
+                    f"Кутилган (≥{th['meets']})": "●" if result['level'] == 'meets' else "",
+                    f"Зўр (≥{th['outstanding']})": "●" if result['level'] == 'outstanding' else "",
+                    f"Фантастик (≥{th['exceptional']})": "●" if result['level'] == 'exceptional' else "",
+                    "Score": result['score'],
+                    "_id": kr['id'],
+                    "_level": result['level']
+                })
+
+            df = pd.DataFrame(table_data)
+
+            # Calculate average
+            avg_score = df['Score'].mean()
+            avg_level = get_level_for_score(avg_score)
+
+            # Create editable dataframe
+            col_table, col_gauge = st.columns([3, 1])
+
+            with col_table:
+                # Header with average score
+                st.markdown(f'''
+                <div style="background:#FFC000; padding:10px 15px; border-radius:8px 8px 0 0; 
+                            display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; font-size:16px;">📋 {objective['name']}</span>
+                    <span style="background:{avg_level['color']}; color:white; padding:5px 15px; 
+                                 border-radius:20px; font-weight:bold; font-size:18px;">
+                        Avg: {avg_score:.2f}
+                    </span>
+                </div>
+                ''', unsafe_allow_html=True)
+
+                # Editable table
+                edited_df = st.data_editor(
+                    df[["KR", "Key Result", "Fact", "Score"]],
+                    column_config={
+                        "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
+                        "Key Result": st.column_config.TextColumn("Key Result", disabled=True, width="medium"),
+                        "Fact": st.column_config.NumberColumn("Fact", min_value=0, max_value=100, step=1,
+                                                              format="%.1f"),
+                        "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
+                    },
+                    hide_index=True,
+                    use_container_width=True,
+                    key=f"editor_{objective['id']}"
+                )
+
+                # Update actual values from edited dataframe
+                for i, row in edited_df.iterrows():
+                    if i < len(krs):
+                        new_actual = row['Fact']
+                        if new_actual != krs[i]['actual']:
+                            st.session_state.objectives[obj_idx]['key_results'][i]['actual'] = new_actual
+                            st.rerun()
+
+                # Visual results table (read-only, shows which level each KR falls into)
+                st.markdown("#### 📊 Results Breakdown")
+
+                # Create visual HTML table
+                html_table = '''
+                <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:10px;">
+                    <thead>
+                        <tr style="background:#4472C4; color:white;">
+                            <th style="padding:8px; border:1px solid #2F5496;">KR</th>
+                            <th style="padding:8px; border:1px solid #2F5496;">Key Result</th>
+                            <th style="padding:8px; border:1px solid #2F5496;">Fact</th>
+                            <th style="padding:8px; border:1px solid #2F5496; background:#d9534f;">Ёмон<br><small>3.00-4.24</small></th>
+                            <th style="padding:8px; border:1px solid #2F5496; background:#f0ad4e; color:#000;">Кутилган<br><small>4.25-4.50</small></th>
+                            <th style="padding:8px; border:1px solid #2F5496; background:#5cb85c;">Зўр<br><small>4.51-4.74</small></th>
+                            <th style="padding:8px; border:1px solid #2F5496; background:#28a745;">Фантастик<br><small>4.75-5.00</small></th>
+                            <th style="padding:8px; border:1px solid #2F5496;">Result</th>
+                            <th style="padding:8px; border:1px solid #2F5496;">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                '''
+
+                for kr_idx, kr in enumerate(krs):
+                    result = calculate_score(kr['actual'], kr['metric_type'], kr['thresholds'])
+                    th = kr['thresholds']
+                    level = result['level']
+
+                    # Cell highlighting
+                    cells = {
+                        'below': 'background:#fff;' if level != 'below' else f'background:#d9534f; color:white; font-weight:bold;',
+                        'meets': 'background:#fff;' if level != 'meets' else f'background:#f0ad4e; color:#000; font-weight:bold;',
+                        'outstanding': 'background:#fff;' if level != 'outstanding' else f'background:#5cb85c; color:white; font-weight:bold;',
+                        'exceptional': 'background:#fff;' if level != 'exceptional' else f'background:#28a745; color:white; font-weight:bold;',
+                    }
+
+                    if kr['metric_type'] == "higher_better":
+                        th_texts = [f"<{th['below']}", f"≥{th['meets']}", f"≥{th['outstanding']}",
+                                    f"≥{th['exceptional']}"]
+                    else:
+                        th_texts = [f">{th['below']}", f"≤{th['meets']}", f"≤{th['outstanding']}",
+                                    f"≤{th['exceptional']}"]
+
+                    row_bg = '#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF'
+
+                    html_table += f'''
+                        <tr style="background:{row_bg};">
+                            <td style="padding:8px; border:1px solid #ddd; font-weight:bold;">KR{kr_idx + 1}</td>
+                            <td style="padding:8px; border:1px solid #ddd; text-align:left;">{kr['name']}</td>
+                            <td style="padding:8px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold;">{kr['actual']}{kr['unit']}</td>
+                            <td style="padding:8px; border:1px solid #ddd; {cells['below']}">{th_texts[0]}</td>
+                            <td style="padding:8px; border:1px solid #ddd; {cells['meets']}">{th_texts[1]}</td>
+                            <td style="padding:8px; border:1px solid #ddd; {cells['outstanding']}">{th_texts[2]}</td>
+                            <td style="padding:8px; border:1px solid #ddd; {cells['exceptional']}">{th_texts[3]}</td>
+                            <td style="padding:8px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold;">{result['score']:.2f}</td>
+                            <td style="padding:8px; border:1px solid #ddd;">🗑️</td>
+                        </tr>
+                    '''
+
+                # Formula row
+                kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
+                html_table += f'''
+                        <tr style="background:#FFF2CC; font-weight:bold;">
+                            <td colspan="7" style="padding:10px; border:2px solid #BF9000; text-align:right;">
+                                ({kr_formula}) / {len(krs)} =
+                            </td>
+                            <td colspan="2" style="padding:10px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:16px;">
+                                {avg_score:.2f}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                '''
+
+                st.markdown(html_table, unsafe_allow_html=True)
+
+                # Delete KR buttons
+                st.markdown("#### 🗑️ Delete Key Results")
+                del_cols = st.columns(len(krs) + 1)
+                for kr_idx, kr in enumerate(krs):
+                    with del_cols[kr_idx]:
+                        if st.button(f"Delete KR{kr_idx + 1}", key=f"del_kr_{objective['id']}_{kr['id']}"):
+                            st.session_state.objectives[obj_idx]['key_results'] = [
+                                k for k in krs if k['id'] != kr['id']
+                            ]
+                            st.rerun()
+
+            with col_gauge:
+                st.markdown("### 🎯 Score")
+                fig = create_gauge(avg_score)
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Level indicator
+                st.markdown(f'''
+                <div style="text-align:center; margin-top:10px;">
+                    <div style="background:{avg_level['color']}; color:white; padding:15px; 
+                                border-radius:10px; font-size:20px; font-weight:bold;">
+                        {avg_level['label']}<br>
+                        <small>{avg_level['label_en']}</small>
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
+
+            # Add KR to this objective
+            with st.expander("➕ Add KR to this Objective"):
+                ac1, ac2, ac3 = st.columns([3, 2, 1])
+                with ac1:
+                    add_name = st.text_input("KR Name", key=f"add_name_{objective['id']}")
+                with ac2:
+                    add_type = st.selectbox("Type", ["higher_better", "lower_better"],
+                                            format_func=lambda x: "↑ Higher" if x == "higher_better" else "↓ Lower",
+                                            key=f"add_type_{objective['id']}")
+                with ac3:
+                    add_unit = st.text_input("Unit", value="%", key=f"add_unit_{objective['id']}")
+
+                at1, at2, at3, at4 = st.columns(4)
+                with at1:
+                    add_below = st.number_input("Below", value=60.0, key=f"add_below_{objective['id']}")
+                with at2:
+                    add_meets = st.number_input("Meets", value=80.0, key=f"add_meets_{objective['id']}")
+                with at3:
+                    add_outst = st.number_input("Outstanding", value=85.0, key=f"add_outst_{objective['id']}")
+                with at4:
+                    add_exc = st.number_input("Exceptional", value=90.0, key=f"add_exc_{objective['id']}")
+
+                if st.button("➕ Add", key=f"add_btn_{objective['id']}"):
+                    if add_name.strip():
+                        st.session_state.objectives[obj_idx]['key_results'].append({
+                            "id": str(uuid.uuid4()),
+                            "name": add_name.strip(),
+                            "metric_type": add_type,
+                            "unit": add_unit,
+                            "thresholds": {"below": add_below, "meets": add_meets,
+                                           "outstanding": add_outst, "exceptional": add_exc},
+                            "actual": 0.0
+                        })
+                        st.rerun()
+
+            # Delete objective
+            if st.button(f"🗑️ Delete Objective '{objective['name']}'", key=f"del_obj_{objective['id']}"):
+                st.session_state.objectives = [o for o in st.session_state.objectives if o['id'] != objective['id']]
+                st.rerun()
+
+            st.markdown("---")
+
+        # Export
+        if st.button("📥 Export JSON"):
+            export = []
+            for obj in st.session_state.objectives:
+                obj_data = {"objective": obj['name'], "key_results": []}
+                scores = []
+                for kr in obj['key_results']:
+                    res = calculate_score(kr['actual'], kr['metric_type'], kr['thresholds'])
+                    scores.append(res['score'])
+                    obj_data['key_results'].append({
+                        "name": kr['name'], "actual": kr['actual'],
+                        "score": res['score'], "level": res['level']
+                    })
+                obj_data['average'] = round(sum(scores) / len(scores), 2) if scores else 0
+                export.append(obj_data)
+            st.json(export)
+
+    else:
+        st.info("👆 Create your first objective!")
+
+        if st.button("📋 Load Demo"):
+            st.session_state.objectives = [{
+                "id": str(uuid.uuid4()),
+                "name": "Objective 1",
+                "key_results": [
+                    {"id": str(uuid.uuid4()), "name": "Tasks in time", "metric_type": "higher_better",
+                     "unit": "%", "thresholds": {"below": 60, "meets": 80, "outstanding": 85, "exceptional": 90},
+                     "actual": 82},
+                    {"id": str(uuid.uuid4()), "name": "Tasks w/o bugs", "metric_type": "higher_better",
+                     "unit": "%", "thresholds": {"below": 60, "meets": 80, "outstanding": 85, "exceptional": 90},
+                     "actual": 80},
+                    {"id": str(uuid.uuid4()), "name": "Engagement", "metric_type": "higher_better",
+                     "unit": "%", "thresholds": {"below": 70, "meets": 90, "outstanding": 93, "exceptional": 96},
+                     "actual": 88}
+                ]
+            }]
+            st.rerun()
+
+
+if __name__ == "__main__":
+    main()

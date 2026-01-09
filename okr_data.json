@@ -1,0 +1,182 @@
+{
+  "departments": [
+    {
+      "id": "e5a3631c-5bb8-4915-84c1-75fbfb0e32ec",
+      "name": "IT",
+      "objectives": [
+        {
+          "id": "fa90a7fe-ce9a-4bb7-8fc6-10456e09fb4a",
+          "name": "Improve Code Quality",
+          "key_results": [
+            {
+              "id": "4824472e-c441-4cb8-a899-71d97ae790ed",
+              "name": "Engagement",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 30.0
+            },
+            {
+              "id": "ae715964-c177-48a2-ae6c-791518ca0545",
+              "name": "Code Quality",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 100.0
+            },
+            {
+              "id": "4687741a-0d6d-4eef-9c5e-0d05a472cc9b",
+              "name": "Task in Time",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 70.0
+            },
+            {
+              "id": "a2533bb1-2706-4308-a34e-5eec6322d835",
+              "name": "Bug count",
+              "metric_type": "lower_better",
+              "unit": "bugs",
+              "thresholds": {
+                "below": 10.0,
+                "meets": 7.0,
+                "good": 5.0,
+                "very_good": 2.0,
+                "exceptional": 0.0
+              },
+              "actual": 6.0
+            },
+            {
+              "id": "7c64f883-9cea-42e5-9d62-d206dea9e590",
+              "name": "Test",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "Доля проектов от общего количества, завершенных с отклонениями от первоначального бюджета.",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 0.0
+            }
+          ]
+        },
+        {
+          "id": "b2d5141d-7e18-467f-99ce-1cad43e84655",
+          "name": "Frontend",
+          "key_results": [
+            {
+              "id": "b6ad1b29-7620-463f-b72a-9050bf1af0fc",
+              "name": "Code Quality",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 100.0
+            },
+            {
+              "id": "7e7ebdca-87f8-43aa-8eda-701788540faa",
+              "name": "UI Quality",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 70.0
+            }
+          ]
+        },
+        {
+          "id": "45bac04b-ecc8-4fb1-a92d-2a17d36fce1e",
+          "name": "Backend",
+          "key_results": [
+            {
+              "id": "5e9714bf-effa-4fc0-b4ef-cfe4e7a6908a",
+              "name": "Code Quality",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 70.0
+            },
+            {
+              "id": "44a98596-fdc7-472f-8968-1edd178c0b8e",
+              "name": "Task in Time",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 100.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f537be16-93a2-4195-b316-5891b8eb5915",
+      "name": "Management",
+      "objectives": [
+        {
+          "id": "f2431f87-d839-4d19-a1b0-2536fb8f3512",
+          "name": "Backend",
+          "key_results": [
+            {
+              "id": "1c0374a0-7300-4246-ab2d-05c7856d983f",
+              "name": "Task in Time",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 50.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "language": "ru"
+}
