@@ -395,33 +395,23 @@ def score_to_percentage(score: float) -> float:
 
 
 def calculate_weighted_objective_score(objective: dict) -> dict:
-    """Calculate weighted average score for an objective based on KR weights."""
+    """Calculate simple average score for an objective."""
     krs = objective.get('key_results', [])
     if not krs:
         return {"score": 0, "level": get_level_for_score(0)}
 
-    total_weight = 0
-    weighted_sum = 0
     results = []
-
     for kr in krs:
-        kr_weight = kr.get('weight', 100 / len(krs))  # Default to equal weight
         result = calculate_score(kr['actual'], kr['metric_type'], kr.get('thresholds', {}))
         results.append(result)
-        weighted_sum += result['score'] * kr_weight
-        total_weight += kr_weight
 
-    # Calculate weighted average (normalize if weights don't sum to 100)
-    if total_weight > 0:
-        avg_score = weighted_sum / total_weight
-    else:
-        avg_score = sum(r['score'] for r in results) / len(results) if results else 0
+    # Calculate simple average
+    avg_score = sum(r['score'] for r in results) / len(results) if results else 0
 
     return {
         "score": round(avg_score, 2),
         "level": get_level_for_score(avg_score),
-        "results": results,
-        "total_weight": total_weight
+        "results": results
     }
 
 
@@ -436,7 +426,7 @@ def calculate_weighted_department_score(department: dict) -> dict:
     obj_scores = []
 
     for obj in objectives:
-        obj_weight = obj.get('weight', 100 / len(objectives))  # Default to equal weight
+        obj_weight = obj.get('weight') or (100 / len(objectives))  # Default to equal weight, handles None
         obj_result = calculate_weighted_objective_score(obj)
         obj_scores.append(obj_result)
         weighted_sum += obj_result['score'] * obj_weight
@@ -467,7 +457,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
     gauge_id = f"gauge_{random.randint(10000, 99999)}"
 
     # Compact mode settings
-    height = 130 if compact else 240
+    height = 180 if compact else 240
     font_size = 12 if compact else 16
     label_size = 8 if compact else 10
     pointer_width = 6 if compact else 10
@@ -604,7 +594,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
     results = obj_result['results']
     avg_level = get_level_for_score(avg_score)
     avg_pct = score_to_percentage(avg_score)
-    obj_weight = objective.get('weight', 0)  # Objective weight within department
+    obj_weight = objective.get('weight') or 0  # Objective weight within department (handles None)
 
     if compact:
         # GRID VIEW - Professional compact card with modern styling
@@ -628,11 +618,9 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
         gauge_html = create_gauge(avg_score, compact=True)
         components.html(gauge_html, height=140)
 
-        # Build KR table rows with professional styling and weights
+        # Build KR table rows with professional styling (without weights)
         kr_rows = ""
         for i, kr in enumerate(krs):
-            kr_weight = kr.get('weight', round(100 / len(krs), 1))
-
             # Handle qualitative vs quantitative display
             if kr['metric_type'] == 'qualitative':
                 actual_display = kr.get('actual', 'E')
@@ -644,12 +632,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
             kr_rows += f'''<tr style="border-bottom:1px solid #f1f5f9; transition:background 0.15s ease;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                 <td style="padding:10px 12px; font-size:11px; color:{THEME["text_secondary"]}; font-weight:600;">KR{i + 1}</td>
                 <td style="padding:10px 12px; font-size:11px; color:{THEME["text_primary"]};" title="{kr.get("description", "") or kr["name"]}"><span style="cursor:help; border-bottom:1px dotted #cbd5e1;">{kr["name"][:28]}{"..." if len(kr["name"]) > 28 else ""}</span></td>
-                <td style="padding:10px 12px; font-size:10px; text-align:center; background:#fef3c7; color:#d97706; font-weight:600; border-radius:4px;">{kr_weight}%</td>
                 <td style="padding:10px 12px; font-size:11px; text-align:center; background:#e6f0ff; font-weight:600; color:#0066cc; border-radius:4px;">{actual_display}</td>
                 <td style="padding:10px 12px; font-size:11px; text-align:center; background:{results[i]["level_info"]["color"]}; color:white; font-weight:700; border-radius:4px;">{results[i]["score"]:.2f}</td>
             </tr>'''
 
-        # Professional table design with weight column
+        # Professional table design (without weight column)
         st.markdown(f"""
         <div style='padding:16px 20px 20px 20px;'>
             <table style='width:100%; border-collapse:separate; border-spacing:0 4px;'>
@@ -657,7 +644,6 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     <tr>
                         <th style='padding:10px 12px; font-size:10px; text-align:left; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>KR</th>
                         <th style='padding:10px 12px; font-size:10px; text-align:left; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('key_result')}</th>
-                        <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('weight')}</th>
                         <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('fact')}</th>
                         <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('score').replace('🎯 ', '')}</th>
                     </tr>
@@ -691,7 +677,6 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         save_data()
                         st.rerun()
 
-            st.markdown("---")
             if st.button(f"🗑️ {t('delete_objective')}", key=f"del_obj_d{dept_idx}_o{obj_idx}", type="secondary"):
                 st.session_state.departments[dept_idx]['objectives'] = [
                     o for o in st.session_state.departments[dept_idx]['objectives'] if o['id'] != objective['id']
@@ -704,11 +689,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
     else:
         # FULL VIEW - Original detailed display with all tables and functionality wrapped in frame
-        obj_weight = objective.get('weight', 0)
+        obj_weight = objective.get('weight') or 0  # handles None values
         weight_badge = f"<span style='background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:12px; font-weight:600; font-size:12px; margin-left:8px;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
 
         st.markdown(
-            f"<div style='background:{THEME['card_bg']}; border:2px solid {THEME['card_border']}; border-radius:10px; padding:16px; margin-bottom:20px; box-shadow:0 4px 8px rgba(0,0,0,0.12);'>",
+            f"<div style='background:{THEME['card_bg']}; border:none; border-radius:10px; padding:0; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); overflow:hidden;'>",
             unsafe_allow_html=True)
         st.markdown(
             f"<div style='background:#FFC000; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px;'>📋 {objective['name']}{weight_badge}</span><span style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('weighted_score')}: {avg_score:.2f}</span></div>",
@@ -723,16 +708,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
-                    kr_weight = kr.get('weight', round(100 / len(krs), 1))
 
-                    kr_col1, kr_col2, kr_col3, kr_col4 = st.columns([3, 1, 1, 1])
+                    kr_col1, kr_col2, kr_col3 = st.columns([3, 1, 1])
                     with kr_col1:
                         st.markdown(f"**KR{kr_idx + 1}:** {kr['name'][:40]}{'...' if len(kr['name']) > 40 else ''}")
                     with kr_col2:
-                        st.markdown(
-                            f"<span style='background:#fef3c7; color:#d97706; padding:2px 8px; border-radius:4px; font-size:11px;'>{kr_weight}%</span>",
-                            unsafe_allow_html=True)
-                    with kr_col3:
                         # Different input based on metric type
                         if kr['metric_type'] == 'qualitative':
                             grade_options = ["A", "B", "C", "D", "E"]
@@ -763,22 +743,21 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                                     'actual'] = new_actual
                                 save_data()
                                 st.rerun()
-                    with kr_col4:
+                    with kr_col3:
                         score_color = result['level_info']['color']
                         st.markdown(
                             f"<div style='background:{score_color}; color:white; padding:4px 8px; border-radius:4px; text-align:center; font-weight:bold;'>{result['score']:.2f}</div>",
                             unsafe_allow_html=True)
 
-                # Results breakdown table with weights
+                # Results breakdown table (without weights)
                 st.markdown(f"#### {t('results_breakdown')}")
 
-                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px; background:#d97706;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>3.00</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>3.00</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
                     th = kr.get('thresholds', {})
                     level = result['level']
-                    kr_weight = kr.get('weight', round(100 / len(krs), 1))
 
                     cells = {
                         'below': '' if level != 'below' else 'background:#d9534f; color:white; font-weight:bold;',
@@ -805,17 +784,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     kr_desc = kr.get('description', '') or kr['name']
                     kr_desc_escaped = kr_desc.replace('"', '&quot;').replace("'", "&#39;")
 
-                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#fef3c7; font-weight:bold; font-size:11px; color:#d97706;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{result['score']:.2f}</td></tr>"
+                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{result['score']:.2f}</td></tr>"
 
-                # Calculate weighted formula display
-                total_kr_weight = sum(kr.get('weight', 0) for kr in krs)
-                if total_kr_weight > 0:
-                    formula_parts = [f"KR{i + 1}×{krs[i].get('weight', 0)}%" for i in range(len(krs))]
-                    kr_formula = " + ".join(formula_parts)
-                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>{t('weighted_score')}: ({kr_formula}) / {total_kr_weight} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
-                else:
-                    kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
-                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                # Simple average formula display (without weights)
+                kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
+                html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='8' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
 
                 table_height = 60 + (len(krs) * 38) + 45
                 components.html(html_table, height=table_height, scrolling=False)
@@ -935,7 +908,7 @@ def load_data():
 
 
 def export_to_excel(departments):
-    """Export OKR data to Excel with color-coded formatting, weights, and qualitative support"""
+    """Export OKR data to Excel with color-coded formatting and qualitative support"""
     wb = Workbook()
     ws = wb.active
     ws.title = "OKR Export"
@@ -955,31 +928,31 @@ def export_to_excel(departments):
     weight_fill = PatternFill(start_color='d97706', end_color='d97706', fill_type='solid')
     header_alignment = Alignment(horizontal='center', vertical='center')
 
-    # Add headers with weights
-    headers = [t('department'), t('objective'), t('objective_weight'), t('key_result'), t('kr_weight'),
+    # Add headers (without KR weight)
+    headers = [t('department'), t('objective'), t('objective_weight'), t('key_result'),
                t('type'), t('actual'), t('unit'), t('below'), t('meets'), t('good'),
                t('very_good'), t('exceptional'), t('score').replace('🎯 ', ''), t('performance_level')]
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
-        cell.fill = weight_fill if 'weight' in header.lower() or header == t('objective_weight') or header == t(
-            'kr_weight') else header_fill
+        cell.fill = weight_fill if header == t('objective_weight') else header_fill
         cell.alignment = header_alignment
 
     # Add data
     row_idx = 2
     for dept in departments:
         dept_name = dept['name']
+        dept_start_row = row_idx  # Track starting row for this department
+
         for obj in dept.get('objectives', []):
             obj_name = obj['name']
-            obj_weight = obj.get('weight', 0)
-            start_row = row_idx  # Track starting row for this objective
+            obj_weight = obj.get('weight') or 0  # handles None values
+            obj_start_row = row_idx  # Track starting row for this objective
             kr_list = obj.get('key_results', [])
 
             for kr in kr_list:
                 # Calculate score
                 result = calculate_score(kr['actual'], kr['metric_type'], kr.get('thresholds', {}))
-                kr_weight = kr.get('weight', round(100 / len(kr_list), 1) if kr_list else 0)
 
                 # Determine metric type display
                 if kr['metric_type'] == 'qualitative':
@@ -992,36 +965,35 @@ def export_to_excel(departments):
                     type_display = '↓ Lower Better'
                     actual_display = kr['actual']
 
-                # Write data (department and objective names only in first row, will be merged later)
-                ws.cell(row=row_idx, column=1, value=dept_name if row_idx == start_row else '')
-                ws.cell(row=row_idx, column=2, value=obj_name if row_idx == start_row else '')
-                ws.cell(row=row_idx, column=3, value=f"{obj_weight}%" if row_idx == start_row else '')
+                # Write data (department only in first row of dept, objective only in first row of obj)
+                ws.cell(row=row_idx, column=1, value=dept_name if row_idx == dept_start_row else '')
+                ws.cell(row=row_idx, column=2, value=obj_name if row_idx == obj_start_row else '')
+                ws.cell(row=row_idx, column=3, value=f"{obj_weight}%" if row_idx == obj_start_row else '')
                 ws.cell(row=row_idx, column=4, value=kr['name'])
-                ws.cell(row=row_idx, column=5, value=f"{kr_weight}%")
-                ws.cell(row=row_idx, column=6, value=type_display)
-                ws.cell(row=row_idx, column=7, value=actual_display)
-                ws.cell(row=row_idx, column=8, value=kr.get('unit', ''))
+                ws.cell(row=row_idx, column=5, value=type_display)
+                ws.cell(row=row_idx, column=6, value=actual_display)
+                ws.cell(row=row_idx, column=7, value=kr.get('unit', ''))
 
                 # Thresholds (show N/A for qualitative)
                 th = kr.get('thresholds', {})
                 if kr['metric_type'] == 'qualitative':
-                    ws.cell(row=row_idx, column=9, value='E')
-                    ws.cell(row=row_idx, column=10, value='D')
-                    ws.cell(row=row_idx, column=11, value='C')
-                    ws.cell(row=row_idx, column=12, value='B')
-                    ws.cell(row=row_idx, column=13, value='A')
+                    ws.cell(row=row_idx, column=8, value='E')
+                    ws.cell(row=row_idx, column=9, value='D')
+                    ws.cell(row=row_idx, column=10, value='C')
+                    ws.cell(row=row_idx, column=11, value='B')
+                    ws.cell(row=row_idx, column=12, value='A')
                 else:
-                    ws.cell(row=row_idx, column=9, value=th.get('below', 0))
-                    ws.cell(row=row_idx, column=10, value=th.get('meets', 0))
-                    ws.cell(row=row_idx, column=11, value=th.get('good', 0))
-                    ws.cell(row=row_idx, column=12, value=th.get('very_good', 0))
-                    ws.cell(row=row_idx, column=13, value=th.get('exceptional', 0))
+                    ws.cell(row=row_idx, column=8, value=th.get('below', 0))
+                    ws.cell(row=row_idx, column=9, value=th.get('meets', 0))
+                    ws.cell(row=row_idx, column=10, value=th.get('good', 0))
+                    ws.cell(row=row_idx, column=11, value=th.get('very_good', 0))
+                    ws.cell(row=row_idx, column=12, value=th.get('exceptional', 0))
 
-                ws.cell(row=row_idx, column=14, value=result['score'])
-                ws.cell(row=row_idx, column=15, value=get_level_label(result['level']))
+                ws.cell(row=row_idx, column=13, value=result['score'])
+                ws.cell(row=row_idx, column=14, value=get_level_label(result['level']))
 
                 # Apply color formatting to performance level cell
-                level_cell = ws.cell(row=row_idx, column=15)
+                level_cell = ws.cell(row=row_idx, column=14)
                 level_cell.fill = PatternFill(start_color=colors[result['level']],
                                               end_color=colors[result['level']],
                                               fill_type='solid')
@@ -1029,49 +1001,38 @@ def export_to_excel(departments):
                 level_cell.alignment = Alignment(horizontal='center', vertical='center')
 
                 # Apply color formatting to score cell
-                score_cell = ws.cell(row=row_idx, column=14)
+                score_cell = ws.cell(row=row_idx, column=13)
                 score_cell.fill = PatternFill(start_color=colors[result['level']],
                                               end_color=colors[result['level']],
                                               fill_type='solid')
                 score_cell.font = Font(bold=True, color='FFFFFF')
                 score_cell.alignment = Alignment(horizontal='center', vertical='center')
 
-                # Apply weight column styling
+                # Apply weight column styling (only objective weight)
                 obj_weight_cell = ws.cell(row=row_idx, column=3)
                 obj_weight_cell.fill = PatternFill(start_color='fef3c7', end_color='fef3c7', fill_type='solid')
                 obj_weight_cell.font = Font(bold=True, color='d97706')
 
-                kr_weight_cell = ws.cell(row=row_idx, column=5)
-                kr_weight_cell.fill = PatternFill(start_color='fef3c7', end_color='fef3c7', fill_type='solid')
-                kr_weight_cell.font = Font(bold=True, color='d97706')
-
                 row_idx += 1
 
-            # Merge cells if there are multiple KRs
+            # Merge objective cells if there are multiple KRs
             if len(kr_list) > 1:
-                end_row = row_idx - 1
-                # Merge department name
-                ws.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
+                obj_end_row = row_idx - 1
                 # Merge objective name
-                ws.merge_cells(start_row=start_row, start_column=2, end_row=end_row, end_column=2)
+                ws.merge_cells(start_row=obj_start_row, start_column=2, end_row=obj_end_row, end_column=2)
                 # Merge objective weight
-                ws.merge_cells(start_row=start_row, start_column=3, end_row=end_row, end_column=3)
+                ws.merge_cells(start_row=obj_start_row, start_column=3, end_row=obj_end_row, end_column=3)
 
-            # Apply formatting to department and objective cells
-            dept_cell = ws.cell(row=start_row, column=1)
-            dept_cell.alignment = Alignment(horizontal='center', vertical='center')
-            dept_cell.font = Font(bold=True)
-
-            obj_cell = ws.cell(row=start_row, column=2)
+            # Apply formatting to objective cell
+            obj_cell = ws.cell(row=obj_start_row, column=2)
             obj_cell.alignment = Alignment(horizontal='center', vertical='center')
             obj_cell.font = Font(bold=True)
 
             # Add darker border after each objective (bottom of last row)
-            end_row = row_idx - 1
+            obj_end_row = row_idx - 1
             thick_bottom = Side(style='medium', color='000000')
-            for col in range(1, 16):  # Columns A to O (15 columns now)
-                cell = ws.cell(row=end_row, column=col)
-                # Preserve existing borders and add thick bottom
+            for col in range(1, 15):
+                cell = ws.cell(row=obj_end_row, column=col)
                 cell.border = Border(
                     left=cell.border.left if cell.border else None,
                     right=cell.border.right if cell.border else None,
@@ -1079,22 +1040,30 @@ def export_to_excel(departments):
                     bottom=thick_bottom
                 )
 
-    # Adjust column widths for new structure
+        # Merge department cells across ALL objectives in this department
+        dept_end_row = row_idx - 1
+        if dept_end_row > dept_start_row:
+            ws.merge_cells(start_row=dept_start_row, start_column=1, end_row=dept_end_row, end_column=1)
+
+        # Apply formatting to department cell
+        dept_cell = ws.cell(row=dept_start_row, column=1)
+        dept_cell.alignment = Alignment(horizontal='center', vertical='center')
+        dept_cell.font = Font(bold=True)
+
     ws.column_dimensions['A'].width = 20  # Department
     ws.column_dimensions['B'].width = 30  # Objective
     ws.column_dimensions['C'].width = 12  # Objective Weight
     ws.column_dimensions['D'].width = 35  # Key Result
-    ws.column_dimensions['E'].width = 10  # KR Weight
-    ws.column_dimensions['F'].width = 15  # Type
-    ws.column_dimensions['G'].width = 10  # Actual
-    ws.column_dimensions['H'].width = 8  # Unit
-    ws.column_dimensions['I'].width = 10  # Below
-    ws.column_dimensions['J'].width = 10  # Meets
-    ws.column_dimensions['K'].width = 10  # Good
-    ws.column_dimensions['L'].width = 12  # Very Good
-    ws.column_dimensions['M'].width = 12  # Exceptional
-    ws.column_dimensions['N'].width = 10  # Score
-    ws.column_dimensions['O'].width = 18  # Performance Level
+    ws.column_dimensions['E'].width = 15  # Type
+    ws.column_dimensions['F'].width = 10  # Actual
+    ws.column_dimensions['G'].width = 8  # Unit
+    ws.column_dimensions['H'].width = 10  # Below
+    ws.column_dimensions['I'].width = 10  # Meets
+    ws.column_dimensions['J'].width = 10  # Good
+    ws.column_dimensions['K'].width = 12  # Very Good
+    ws.column_dimensions['L'].width = 12  # Exceptional
+    ws.column_dimensions['M'].width = 10  # Score
+    ws.column_dimensions['N'].width = 18  # Performance Level
 
     # Save to BytesIO
     output = BytesIO()
@@ -1119,19 +1088,72 @@ def inject_global_css():
         background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     }
 
-    /* Remove default Streamlit padding - reduced top space */
+    /* ===== AGGRESSIVE TOP SPACE REMOVAL ===== */
+    /* Remove default Streamlit padding */
     .main .block-container {
-        padding-top: 0.5rem;
+        padding-top: 0 !important;
         padding-bottom: 0rem;
         padding-left: 1.5rem;
         padding-right: 1.5rem;
         max-width: 100%;
     }
 
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    /* Target the root app container */
+    .stApp {
+        margin-top: -80px !important;
+    }
+
+    /* Alternative: use negative margin on main content */
+    [data-testid="stAppViewContainer"] {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main {
+        padding-top: 0 !important;
+    }
+
+    /* Hide Streamlit branding and COMPLETELY remove header space */
+    #MainMenu {display: none !important;}
+    footer {display: none !important;}
+    header {display: none !important; height: 0 !important;}
+
+    /* Remove header element completely */
+    [data-testid="stHeader"] {
+        display: none !important;
+        height: 0 !important;
+    }
+
+    .stApp > header {
+        display: none !important;
+        height: 0 !important;
+    }
+
+    /* Remove any top decoration/toolbar */
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+
+    /* Remove deploy button area */
+    [data-testid="stDecoration"] {
+        display: none !important;
+    }
+
+    /* Remove top bar/status bar */
+    [data-testid="stStatusWidget"] {
+        display: none !important;
+    }
+
+    /* Ensure no top margin on first element */
+    .element-container:first-child {
+        margin-top: 0 !important;
+    }
+
+    /* Target iframe container if embedded */
+    .stApp iframe {
+        margin-top: 0 !important;
+    }
+    /* ===== END TOP SPACE REMOVAL ===== */
 
     /* Professional buttons */
     .stButton>button {
@@ -1238,6 +1260,22 @@ def inject_global_css():
         margin: 1rem 0;
     }
 
+    /* ===== STICKY SIDEBAR ===== */
+    /* Make the sidebar column sticky */
+    [data-testid="stHorizontalBlock"] > div:first-child {
+        position: sticky;
+        top: 0;
+        align-self: flex-start;
+        max-height: 100vh;
+        overflow-y: auto;
+    }
+
+    /* Ensure proper scrolling behavior */
+    [data-testid="stHorizontalBlock"] {
+        align-items: flex-start !important;
+    }
+    /* ===== END STICKY SIDEBAR ===== */
+
     /* Alert/warning styling */
     .stAlert {
         border-radius: 8px;
@@ -1259,26 +1297,11 @@ def main():
         st.session_state.new_krs = []
         st.session_state.initialized = True
 
-    # Compact Professional Header
-    col_header, col_lang = st.columns([5, 1])
-    with col_header:
-        st.markdown(f"""
-        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; padding:16px 20px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); border-radius:12px; box-shadow:0 4px 16px rgba(26,54,93,0.2);">
-            <div style="background:rgba(255,255,255,0.15); padding:12px; border-radius:10px;">
-                <span style="font-size:32px;">🎯</span>
-            </div>
-            <div>
-                <h1 style="margin:0; font-size:24px; color:white; font-weight:700; letter-spacing:-0.5px;">
-                    {t("title")}
-                </h1>
-                <p style="margin:4px 0 0 0; font-size:13px; color:rgba(255,255,255,0.75); font-weight:400;">
-                    Enterprise Performance Management System
-                </p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    # Top spacing and language selector
+    # st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
+    col_spacer_top, col_lang = st.columns([5, 1])
     with col_lang:
-        st.markdown("<div style='padding-top:20px;'>", unsafe_allow_html=True)
         lang_options = {"en": "🇬🇧 EN", "ru": "🇷🇺 RU", "uz": "🇺🇿 UZ"}
         selected_lang = st.selectbox("", list(lang_options.keys()),
                                      format_func=lambda x: lang_options[x],
@@ -1288,7 +1311,6 @@ def main():
             st.session_state.language = selected_lang
             save_data()
             st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
     # ===== SIDEBAR TOGGLE =====
     if 'sidebar_collapsed' not in st.session_state:
@@ -1397,11 +1419,9 @@ def main():
     with col_main:
         # === MAIN DASHBOARD AREA ===
 
-        # Performance scale legend (professional card design)
+        # Performance scale legend (simple title + colored boxes, no container)
         st.markdown(f"""
-            <div style='background:white; border-radius:12px; padding:16px 20px; margin-bottom:20px; border:1px solid {THEME['card_border']}; box-shadow:0 2px 8px rgba(0,0,0,0.04);'>
-                <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'>📊 {t('performance_scale')}</p>
-                <div style='display:flex; gap:8px; flex-wrap:wrap;'>
+            <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'>📊 {t('performance_scale')}</p>
         """, unsafe_allow_html=True)
 
         cols = st.columns(5)
@@ -1410,14 +1430,12 @@ def main():
             with cols[i]:
                 pct_range = f"{score_to_percentage(level['min'])}%-{score_to_percentage(level['max'])}%"
                 st.markdown(f"""
-                    <div style='background:linear-gradient(135deg, {level['color']} 0%, {level['color']}dd 100%); color:white; padding:12px 10px; border-radius:10px; text-align:center; box-shadow:0 2px 8px {level['color']}30;'>
+                    <div style='background:linear-gradient(135deg, {level['color']} 0%, {level['color']}dd 100%); color:white; padding:12px 10px; border-radius:10px; text-align:center; box-shadow:0 2px 8px {level['color']}30; margin-bottom:16px;'>
                         <div style='font-size:12px; font-weight:700; margin-bottom:4px;'>{get_level_label(key)}</div>
                         <div style='font-size:11px; opacity:0.9;'>{level['min']:.2f} - {level['max']:.2f}</div>
                         <div style='font-size:10px; opacity:0.75; margin-top:2px;'>{pct_range}</div>
                     </div>
                 """, unsafe_allow_html=True)
-
-        st.markdown("</div></div>", unsafe_allow_html=True)
 
         # ===== CREATE DEPARTMENT =====
         with st.expander(t("create_department"), expanded=len(st.session_state.departments) == 0):
@@ -1433,8 +1451,6 @@ def main():
                     st.rerun()
                 else:
                     st.error(t("enter_dept_name"))
-
-        st.markdown("---")
 
         # ===== CREATE OBJECTIVE =====
         with st.expander(t("create_objective"), expanded=False):
@@ -1461,8 +1477,8 @@ def main():
 
                 st.markdown(f"#### {t('add_key_results')}")
 
-                # KR basic info with weight
-                c1, c2, c3, c4 = st.columns([3, 1.5, 1, 1])
+                # KR basic info (without weight)
+                c1, c2, c3 = st.columns([3, 1.5, 1])
                 with c1:
                     kr_name = st.text_input(t("kr_name"), key="kr_name_input")
                 with c2:
@@ -1473,9 +1489,6 @@ def main():
                     kr_unit = st.text_input(t("unit"), value="%" if kr_type != "qualitative" else "",
                                             key="kr_unit_input",
                                             disabled=(kr_type == "qualitative"))
-                with c4:
-                    kr_weight = st.number_input(t("kr_weight"), min_value=0, max_value=100, value=0,
-                                                key="kr_weight_input", help="Weight within objective (0-100%)")
 
                 # Description field for tooltip
                 kr_description = st.text_area(t("kr_description"), placeholder=t("kr_description_placeholder"),
@@ -1511,7 +1524,6 @@ def main():
                             "id": str(uuid.uuid4()), "name": kr_name.strip(), "metric_type": kr_type,
                             "unit": "" if kr_type == "qualitative" else kr_unit,
                             "description": kr_description.strip(),
-                            "weight": kr_weight,
                             "thresholds": {"below": th_below, "meets": th_meets,
                                            "good": th_good, "very_good": th_very_good,
                                            "exceptional": th_exceptional},
@@ -1521,10 +1533,6 @@ def main():
 
                 if st.session_state.new_krs:
                     st.markdown(f"**{t('added_krs')}:**")
-                    # Calculate total weight
-                    total_kr_weight = sum(kr.get('weight', 0) for kr in st.session_state.new_krs)
-                    if total_kr_weight > 0 and total_kr_weight != 100:
-                        st.warning(f"{t('weights_warning')} ({t('weights_total')}: {total_kr_weight}%)")
 
                     for i, kr in enumerate(st.session_state.new_krs):
                         col1, col2, col3 = st.columns([4, 1, 1])
@@ -1533,8 +1541,7 @@ def main():
                                 icon = "📊"
                             else:
                                 icon = "↑" if kr['metric_type'] == "higher_better" else "↓"
-                            weight_str = f" [{kr.get('weight', 0)}%]" if kr.get('weight', 0) > 0 else ""
-                            st.write(f"**KR{i + 1}: {kr['name']}** ({icon}){weight_str}")
+                            st.write(f"**KR{i + 1}: {kr['name']}** ({icon})")
                         with col2:
                             if st.button(f"❌", key=f"rm_{kr['id']}"):
                                 st.session_state.new_krs = [k for k in st.session_state.new_krs if k['id'] != kr['id']]
@@ -1556,8 +1563,6 @@ def main():
                         st.rerun()
                     else:
                         st.error(t("enter_name_error"))
-
-        st.markdown("---")
 
         # Display objectives
         if st.session_state.departments:
