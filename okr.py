@@ -1087,6 +1087,9 @@ def inject_global_css():
     .main {
         background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     }
+    .stApp {
+        margin-top: -100px !important;
+    }
 
     /* ===== AGGRESSIVE TOP SPACE REMOVAL ===== */
     /* Remove default Streamlit padding */
@@ -1372,7 +1375,7 @@ def main():
 
             # View mode switcher
             st.markdown(
-                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>👁️ {t('view_mode')}</h3>",
+                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'> {t('view_mode')}</h3>",
                 unsafe_allow_html=True)
             view_mode = st.radio(
                 "View",
