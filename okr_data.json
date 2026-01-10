@@ -1,150 +1,367 @@
 {
   "departments": [
     {
-      "id": "412680c5-8d0e-45af-b3f3-9ea8b2129a3a",
-      "name": "IT",
+      "id": "7aed3f47-cdbd-48db-88ed-f513eaafb040",
+      "name": "PMO - Project Management Office",
       "objectives": [
         {
-          "id": "83fdc216-1d18-4f6c-a3fb-2158afd25eb2",
-          "name": "Improve Code Quality",
+          "id": "857b0202-f183-43ec-9819-e74ffea37220",
+          "name": "Цель 1: Обеспечить своевременную реализацию проектов",
           "weight": 20,
           "key_results": [
             {
-              "id": "fc634bd2-9ba5-482a-9f16-602087cf5949",
-              "name": "Code in time",
+              "id": "734d5548-1c37-4992-a920-28cfff81ac2a",
+              "name": "KR1.1 Проекты завершенные в срок (% от кол-ва проектов)",
               "metric_type": "higher_better",
               "unit": "%",
-              "description": "is the code written in time?",
-              "weight": 0,
+              "weight": 40,
+              "description": "Процент проектов, которые были завершены в установленные сроки. Измеряется как отношение количества проектов, завершенных вовремя, к общему количеству проектов.",
               "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
+                "below": 50,
+                "meets": 60,
+                "good": 80,
+                "very_good": 100,
+                "exceptional": 120
               },
-              "actual": 50.0
+              "actual": 0
             },
             {
-              "id": "0d586ec9-a5cc-4a86-841e-7951b79b53df",
-              "name": "Engagement",
+              "id": "fc2b1da4-f0f9-439b-a31d-79410afb8d97",
+              "name": "KR1.2 Задачи в JIRA, завершенные в срок (%)",
               "metric_type": "higher_better",
               "unit": "%",
-              "description": "The time spent on task",
-              "weight": 0,
+              "weight": 35,
+              "description": "Процент задач в системе JIRA, выполненных в установленные сроки без переносов дедлайнов.",
               "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
+                "below": 50,
+                "meets": 65,
+                "good": 95,
+                "very_good": 100,
+                "exceptional": 200
               },
-              "actual": 100.0
+              "actual": 0
             },
             {
-              "id": "194417b4-407d-4c1c-88e1-dcb7d4ea07f8",
-              "name": "Code with Bugs",
+              "id": "3b046434-bb69-43e5-9825-5ffef089eafb",
+              "name": "KR1.3 Переносы сроков заверш задач в JIRA (% от общего кол-ва)",
               "metric_type": "lower_better",
               "unit": "%",
-              "description": "How many bugs in the code?",
-              "weight": 0,
+              "weight": 25,
+              "description": "Процент задач, у которых были перенесены сроки выполнения. Чем меньше значение, тем лучше.",
               "thresholds": {
-                "below": 10.0,
-                "meets": 7.0,
-                "good": 5.0,
-                "very_good": 2.0,
-                "exceptional": 0.0
+                "below": 30,
+                "meets": 20,
+                "good": 15,
+                "very_good": 5,
+                "exceptional": 0
               },
-              "actual": 9.0
+              "actual": 0
             }
           ]
         },
         {
-          "id": "d9e680db-2cf3-4abf-bfc9-e0cd942eb162",
-          "name": "Frontend",
+          "id": "99c43a34-621f-4bdd-b190-a4bde083f334",
+          "name": "Цель 2: Управление рисками и бюджетом проектов",
           "weight": 20,
           "key_results": [
             {
-              "id": "e56840dd-0919-4ddc-b94f-d6b3fd60b7b2",
-              "name": "UI Quality",
+              "id": "352bdebf-b538-466f-92e8-a0d4478bf678",
+              "name": "KR2.1 Проекты в рамках бюджетов (% без превышения)",
               "metric_type": "higher_better",
               "unit": "%",
-              "description": "user interface quality",
+              "weight": 30,
               "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
+                "below": 50,
+                "meets": 60,
+                "good": 75,
+                "very_good": 90,
+                "exceptional": 100
               },
-              "actual": 100.0
+              "actual": 0
             },
             {
-              "id": "26bea162-c41d-4665-bc85-51487e4f879a",
-              "name": "Engagement",
-              "metric_type": "higher_better",
-              "unit": "%",
-              "description": "engagement to the project",
-              "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
-              },
-              "actual": 70.0
-            },
-            {
-              "id": "6eaec81d-f7e7-48ad-bee5-54437709fb44",
-              "name": "Codes with bugs",
+              "id": "592c9755-d0b3-43e0-8f75-99d3ffccc300",
+              "name": "KR2.2 Неучтенные риски возникшие после начала проекта (кол-во)",
               "metric_type": "lower_better",
-              "unit": "bug",
-              "description": "number of bugs in the project",
+              "unit": "",
+              "weight": 25,
               "thresholds": {
-                "below": 10.0,
-                "meets": 7.0,
-                "good": 5.0,
-                "very_good": 2.0,
-                "exceptional": 0.0
+                "below": 10,
+                "meets": 5,
+                "good": 2,
+                "very_good": 1,
+                "exceptional": 0
               },
-              "actual": 6.0
+              "actual": 0
+            },
+            {
+              "id": "484cf7a3-7fe7-4278-869a-6e19357f8c3b",
+              "name": "KR2.3 Повысить точность оценки трудозатрат до 75%",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "weight": 25,
+              "thresholds": {
+                "below": 50,
+                "meets": 75,
+                "good": 80,
+                "very_good": 85,
+                "exceptional": 100
+              },
+              "actual": 0
+            },
+            {
+              "id": "c7ccf9f9-a1c7-48dd-90be-29bc8dc5d4e5",
+              "name": "KR2.4 Процент рисков с планами митигации (%)",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "weight": 20,
+              "thresholds": {
+                "below": 20,
+                "meets": 50,
+                "good": 60,
+                "very_good": 80,
+                "exceptional": 100
+              },
+              "actual": 0
             }
           ]
         },
         {
-          "id": "364f206b-c574-4e16-9c4e-64a8ca0461b6",
-          "name": "Backend",
+          "id": "456b76b4-991e-477f-b180-a2ef339cdc86",
+          "name": "Цель 3: Управление качеством и отчетность",
           "weight": 20,
           "key_results": [
             {
-              "id": "db26711a-7157-4d49-bbbc-d5e859ebacbe",
-              "name": "Projects",
-              "metric_type": "higher_better",
-              "unit": "project",
-              "description": "number of projects",
+              "id": "380a76f6-902f-41f7-9551-1df345d132e7",
+              "name": "KR3.1 Своевременность отчетов W,Q,Y, другие (задержка, дней)",
+              "metric_type": "lower_better",
+              "unit": " дней",
+              "weight": 25,
               "thresholds": {
-                "below": 50.0,
-                "meets": 80.0,
-                "good": 150.0,
-                "very_good": 170.0,
-                "exceptional": 200.0
+                "below": 5,
+                "meets": 3,
+                "good": 2,
+                "very_good": 1,
+                "exceptional": 0
               },
-              "actual": 198.0
+              "actual": 0
             },
             {
-              "id": "7d32294f-4666-4a98-890e-4dc67ce848d3",
-              "name": "Quality",
+              "id": "c5d84f09-f65d-4110-83a9-77a070be6729",
+              "name": "KR3.2 Уровень использования ресурсов (resource utilization) %",
               "metric_type": "higher_better",
               "unit": "%",
-              "description": "",
+              "weight": 25,
               "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
+                "below": 75,
+                "meets": 85,
+                "good": 90,
+                "very_good": 95,
+                "exceptional": 100
               },
-              "actual": 80.0
+              "actual": 0
+            },
+            {
+              "id": "09bd73ae-2b8c-41c0-950f-02e7621a1038",
+              "name": "KR3.3 Реагирование на изменения (Response time to changes) часы",
+              "metric_type": "lower_better",
+              "unit": " часов",
+              "weight": 25,
+              "thresholds": {
+                "below": 5,
+                "meets": 3,
+                "good": 2,
+                "very_good": 1,
+                "exceptional": 0
+              },
+              "actual": 0
+            },
+            {
+              "id": "65a7807e-24c4-48a3-a489-c2f961a23b98",
+              "name": "KR3.4 Среднее время от инициации до завершения проекта (нед)",
+              "metric_type": "lower_better",
+              "unit": " нед",
+              "weight": 25,
+              "thresholds": {
+                "below": 10,
+                "meets": 8,
+                "good": 6,
+                "very_good": 5,
+                "exceptional": 4
+              },
+              "actual": 0
+            }
+          ]
+        },
+        {
+          "id": "e1fb8d25-6905-403f-97b7-7ac3886621a9",
+          "name": "Цель 4: Усиление состава и человеческий капитал",
+          "weight": 10,
+          "key_results": [
+            {
+              "id": "4dc4fd24-22ed-44c0-9549-6d1fdf0fb7a9",
+              "name": "KR4.1 Комплектация штата (6 свободных вакансий в штате)",
+              "metric_type": "higher_better",
+              "unit": "",
+              "weight": 35,
+              "thresholds": {
+                "below": 2,
+                "meets": 3,
+                "good": 4,
+                "very_good": 5,
+                "exceptional": 6
+              },
+              "actual": "0"
+            },
+            {
+              "id": "319da350-a9ff-4329-90cd-336426ce0e3c",
+              "name": "KR4.2 Набор и подготовка стажеров (16 вакансий)",
+              "metric_type": "higher_better",
+              "unit": "",
+              "weight": 35,
+              "thresholds": {
+                "below": 3,
+                "meets": 6,
+                "good": 10,
+                "very_good": 12,
+                "exceptional": 16
+              },
+              "actual": "0"
+            },
+            {
+              "id": "f338960b-84c7-4fac-b7fa-ece5ee3554ae",
+              "name": "KR4.3 Качество развития сотрудников (оценка)",
+              "metric_type": "qualitative",
+              "unit": "",
+              "weight": 30,
+              "description": "Качественная оценка программы развития сотрудников. A=Отлично, B=Очень хорошо, C=Хорошо, D=Удовлетворительно, E=Неудовлетворительно",
+              "thresholds": {
+                "below": 0,
+                "meets": 0,
+                "good": 0,
+                "very_good": 0,
+                "exceptional": 0
+              },
+              "actual": "C"
+            }
+          ]
+        },
+        {
+          "id": "c4875a61-7c29-4920-ba3e-151b34ea7af6",
+          "name": "Цель 5: Улучшение продуктов",
+          "weight": 10,
+          "key_results": [
+            {
+              "id": "d97adefb-5890-445f-b5e5-5e43fc732438",
+              "name": "KR5.1 Увеличить долю проектов, связанных со стратегическими целями Банка, до 85%",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "weight": 30,
+              "thresholds": {
+                "below": 75,
+                "meets": 85,
+                "good": 90,
+                "very_good": 95,
+                "exceptional": 100
+              },
+              "actual": 0
+            },
+            {
+              "id": "57770388-eca7-4921-b2c9-0243292e4eda",
+              "name": "KR5.2 % продуктов с повторными багами (Defect/error rate)",
+              "metric_type": "lower_better",
+              "unit": "%",
+              "weight": 30,
+              "thresholds": {
+                "below": 20,
+                "meets": 15,
+                "good": 10,
+                "very_good": 5,
+                "exceptional": 0
+              },
+              "actual": 0
+            },
+            {
+              "id": "aff0d3e5-4b63-481e-bd02-8cd0fc59ad04",
+              "name": "KR5.3 Обеспечить участие 100% членов команды в обучении по Agile/Scrum",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "weight": 20,
+              "thresholds": {
+                "below": 80,
+                "meets": 90,
+                "good": 95,
+                "very_good": 100,
+                "exceptional": 100
+              },
+              "actual": 0
+            },
+            {
+              "id": "52f3595f-c3b6-4442-80d0-e1bfef79ceae",
+              "name": "KR5.4 Провести 6 внутренних воркшопов по методологиям и новым технологиям",
+              "metric_type": "higher_better",
+              "unit": "",
+              "weight": 20,
+              "thresholds": {
+                "below": 4,
+                "meets": 6,
+                "good": 7,
+                "very_good": 8,
+                "exceptional": 9
+              },
+              "actual": 0
+            }
+          ]
+        },
+        {
+          "id": "3294879d-df79-4c1f-bd1d-6972c7ae724f",
+          "name": "Цель 6: Системная и бизнес аналитика и ее автоматизация",
+          "weight": 20,
+          "key_results": [
+            {
+              "id": "75420b47-f411-4264-92cd-22ead675a387",
+              "name": "KR6.1 Уровень автоматизации процессов проектного управления",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "weight": 40,
+              "thresholds": {
+                "below": 75,
+                "meets": 85,
+                "good": 90,
+                "very_good": 95,
+                "exceptional": 100
+              },
+              "actual": 0
+            },
+            {
+              "id": "d0ec6f0c-eeb9-4d11-80c6-e847dcaca6c3",
+              "name": "KR6.2 Качество описание бизнес процессов (изменение BPMN) %",
+              "metric_type": "lower_better",
+              "unit": "%",
+              "weight": 30,
+              "thresholds": {
+                "below": 20,
+                "meets": 15,
+                "good": 10,
+                "very_good": 5,
+                "exceptional": 0
+              },
+              "actual": 0
+            },
+            {
+              "id": "1ecb1da3-2455-41d4-91f0-fce7a17e3531",
+              "name": "KR6.3 Процент изменений плана проекта после планирования",
+              "metric_type": "lower_better",
+              "unit": "%",
+              "weight": 30,
+              "thresholds": {
+                "below": 20,
+                "meets": 15,
+                "good": 10,
+                "very_good": 5,
+                "exceptional": 0
+              },
+              "actual": 0
             }
           ]
         }

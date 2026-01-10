@@ -598,15 +598,16 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
     if compact:
         # GRID VIEW - Professional compact card with modern styling
-        # Only include weight badge HTML if weight is set
-        if obj_weight > 0:
-            weight_badge_html = f"<span style='display:inline-block; padding:5px 12px; background:#fef3c7; color:#d97706; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>"
-        else:
-            weight_badge_html = ""
-
         # Use Streamlit container with border for the card
         with st.container(border=True):
-            # Header section
+            # Header section - build badges section
+            badges_html = f"""<span style='display:inline-block; padding:6px 14px; background:{avg_level['color']}15; color:{avg_level['color']}; border:1px solid {avg_level['color']}30; border-radius:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
+                        <span style='display:inline-block; padding:6px 14px; background:#f1f5f9; color:{THEME['text_secondary']}; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600;'>{len(krs)} KRs</span>"""
+
+            if obj_weight > 0:
+                badges_html += f"""
+                        <span style='display:inline-block; padding:5px 12px; background:#fef3c7; color:#d97706; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>"""
+
             st.markdown(f"""
                 <div style='background:linear-gradient(180deg, {avg_level['color']}08 0%, #ffffff 100%); padding:16px; margin-bottom:16px; border-bottom:3px solid {avg_level['color']}; border-radius:8px 8px 0 0;'>
                     <div style='display:flex; justify-content:space-between; align-items:flex-start; gap:12px;'>
@@ -614,9 +615,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:white; padding:8px 16px; border-radius:20px; font-size:15px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 3px 10px {avg_level['color']}50;'>{avg_score:.2f}</div>
                     </div>
                     <div style='margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;'>
-                        <span style='display:inline-block; padding:6px 14px; background:{avg_level['color']}15; color:{avg_level['color']}; border:1px solid {avg_level['color']}30; border-radius:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
-                        <span style='display:inline-block; padding:6px 14px; background:#f1f5f9; color:{THEME['text_secondary']}; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600;'>{len(krs)} KRs</span>
-                        {weight_badge_html}
+                        {badges_html}
                     </div>
                 </div>
             """, unsafe_allow_html=True)
