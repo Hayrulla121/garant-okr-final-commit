@@ -23,7 +23,7 @@
                 "very_good": 90.0,
                 "exceptional": 100.0
               },
-              "actual": 70.0
+              "actual": 50.0
             },
             {
               "id": "0d586ec9-a5cc-4a86-841e-7951b79b53df",
@@ -145,34 +145,6 @@
                 "exceptional": 100.0
               },
               "actual": 80.0
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "8fc5808c-c374-41af-a0d2-518899eb6efe",
-      "name": "Management",
-      "objectives": [
-        {
-          "id": "8451ff5a-fa0f-4fa9-b270-b1b3fdf2a600",
-          "name": "Documentation",
-          "weight": 0,
-          "key_results": [
-            {
-              "id": "85be2e0a-4ba6-4352-ae0c-98a4f7143003",
-              "name": "Documentation in Time",
-              "metric_type": "higher_better",
-              "unit": "%",
-              "description": "",
-              "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
-              },
-              "actual": 70.0
             }
           ]
         }

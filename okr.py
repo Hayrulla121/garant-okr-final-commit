@@ -598,7 +598,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
     if compact:
         # GRID VIEW - Professional compact card with modern styling
-        weight_badge = f"<span style='display:inline-block; padding:5px 12px; background:#fef3c7; color:#d97706; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
+        # Only include weight badge HTML if weight is set
+        if obj_weight > 0:
+            weight_badge_html = f"<span style='display:inline-block; padding:5px 12px; background:#fef3c7; color:#d97706; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>"
+        else:
+            weight_badge_html = ""
 
         st.markdown(f"""
             <div style='background:{THEME['card_bg']}; border:1px solid {THEME['card_border']}; border-radius:12px; padding:0; margin-bottom:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); overflow:hidden; transition:all 0.2s ease;'>
@@ -610,72 +614,60 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     <div style='margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;'>
                         <span style='display:inline-block; padding:5px 12px; background:{avg_level['color']}12; color:{avg_level['color']}; border-radius:6px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
                         <span style='display:inline-block; padding:5px 12px; background:#f1f5f9; color:{THEME['text_secondary']}; border-radius:6px; font-size:11px; font-weight:500;'>{len(krs)} Key Results</span>
-                        {weight_badge}
+                        {weight_badge_html}
                     </div>
                 </div>
+            </div>
         """, unsafe_allow_html=True)
 
         gauge_html = create_gauge(avg_score, compact=True)
         components.html(gauge_html, height=140)
 
-        # Build KR table rows with professional styling (without weights)
-        kr_rows = ""
-        for i, kr in enumerate(krs):
-            # Handle qualitative vs quantitative display
-            if kr['metric_type'] == 'qualitative':
-                actual_display = kr.get('actual', 'E')
-                if not actual_display:
-                    actual_display = 'E'
-            else:
-                actual_display = f"{kr['actual']}{kr['unit']}"
+        # Editable table for facts
+        table_data = []
+        for kr_idx, kr in enumerate(krs):
+            result = results[kr_idx]
+            table_data.append({
+                "KR": f"KR{kr_idx + 1}",
+                t("key_result"): kr['name'],
+                t("fact"): kr['actual'],
+                "Score": result['score'],
+            })
 
-            kr_rows += f'''<tr style="border-bottom:1px solid #f1f5f9; transition:background 0.15s ease;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                <td style="padding:10px 12px; font-size:11px; color:{THEME["text_secondary"]}; font-weight:600;">KR{i + 1}</td>
-                <td style="padding:10px 12px; font-size:11px; color:{THEME["text_primary"]};" title="{kr.get("description", "") or kr["name"]}"><span style="cursor:help; border-bottom:1px dotted #cbd5e1;">{kr["name"][:28]}{"..." if len(kr["name"]) > 28 else ""}</span></td>
-                <td style="padding:10px 12px; font-size:11px; text-align:center; background:#e6f0ff; font-weight:600; color:#0066cc; border-radius:4px;">{actual_display}</td>
-                <td style="padding:10px 12px; font-size:11px; text-align:center; background:{results[i]["level_info"]["color"]}; color:white; font-weight:700; border-radius:4px;">{results[i]["score"]:.2f}</td>
-            </tr>'''
+        df = pd.DataFrame(table_data)
 
-        # Professional table design (without weight column)
-        st.markdown(f"""
-        <div style='padding:16px 20px 20px 20px;'>
-            <table style='width:100%; border-collapse:separate; border-spacing:0 4px;'>
-                <thead>
-                    <tr>
-                        <th style='padding:10px 12px; font-size:10px; text-align:left; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>KR</th>
-                        <th style='padding:10px 12px; font-size:10px; text-align:left; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('key_result')}</th>
-                        <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('fact')}</th>
-                        <th style='padding:10px 12px; font-size:10px; text-align:center; color:{THEME["text_secondary"]}; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;'>{t('score').replace('🎯 ', '')}</th>
-                    </tr>
-                </thead>
-                <tbody>{kr_rows}</tbody>
-            </table>
-        </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Editable table for Fact column
+        edited_df = st.data_editor(
+            df,
+            column_config={
+                "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
+                t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True, width="medium"),
+                t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
+                                                         step=1, format="%.1f"),
+                "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
+            },
+            hide_index=True,
+            use_container_width=True,
+            key=f"grid_editor_d{dept_idx}_o{obj_idx}_{objective['id']}"
+        )
 
-        with st.expander(f"✏️ {t('edit_manage')}", expanded=False):
+        # Update actual values from edited dataframe
+        for i, row in edited_df.iterrows():
+            if i < len(krs):
+                new_actual = row[t("fact")]
+                if new_actual != krs[i]['actual']:
+                    st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i]['actual'] = new_actual
+                    save_data()
+                    st.rerun()
+
+        with st.expander(f"🗑️ {t('delete_krs')}", expanded=False):
             for kr_idx, kr in enumerate(krs):
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    kr_desc = kr.get('description', '')
-                    if kr_desc:
-                        st.write(f"**KR{kr_idx + 1}:** {kr['name']}")
-                        st.caption(f"ℹ️ {kr_desc}")
-                    else:
-                        st.write(f"**KR{kr_idx + 1}:** {kr['name']}")
-                with col2:
-                    new_val = st.number_input(
-                        t("value"),
-                        value=float(kr['actual']) if kr['actual'] is not None else 0.0,
-                        key=f"edit_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
-                        label_visibility="collapsed"
-                    )
-                    if new_val != kr['actual']:
-                        st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx][
-                            'actual'] = new_val
-                        save_data()
-                        st.rerun()
+                if st.button(f"{t('delete')} KR{kr_idx + 1}", key=f"del_grid_kr_d{dept_idx}_o{obj_idx}_{kr['id']}"):
+                    st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'] = [
+                        k for k in krs if k['id'] != kr['id']
+                    ]
+                    save_data()
+                    st.rerun()
 
             if st.button(f"🗑️ {t('delete_objective')}", key=f"del_obj_d{dept_idx}_o{obj_idx}", type="secondary"):
                 st.session_state.departments[dept_idx]['objectives'] = [
@@ -700,51 +692,44 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
             col_table, col_gauge = st.columns([3, 1])
 
             with col_table:
-                # Build DataFrame for editable table - now with weights and handling qualitative
-                st.markdown(f"##### 📝 {t('edit_manage')}")
-
+                # Build DataFrame for editable table (KR, Key Result, Fact, Score only)
+                table_data = []
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
+                    table_data.append({
+                        "KR": f"KR{kr_idx + 1}",
+                        t("key_result"): kr['name'],
+                        t("fact"): kr['actual'],
+                        "Score": result['score'],
+                    })
 
-                    kr_col1, kr_col2, kr_col3 = st.columns([3, 1, 1])
-                    with kr_col1:
-                        st.markdown(f"**KR{kr_idx + 1}:** {kr['name'][:40]}{'...' if len(kr['name']) > 40 else ''}")
-                    with kr_col2:
-                        # Different input based on metric type
-                        if kr['metric_type'] == 'qualitative':
-                            grade_options = ["A", "B", "C", "D", "E"]
-                            current_grade = str(kr.get('actual', 'E')).upper()
-                            if current_grade not in grade_options:
-                                current_grade = "E"
-                            new_grade = st.selectbox(
-                                t("qualitative_grade"),
-                                grade_options,
-                                index=grade_options.index(current_grade),
-                                key=f"grade_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
-                                label_visibility="collapsed"
-                            )
-                            if new_grade != current_grade:
-                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx][
-                                    'actual'] = new_grade
-                                save_data()
-                                st.rerun()
-                        else:
-                            new_actual = st.number_input(
-                                t("fact"),
-                                value=float(kr['actual']) if kr['actual'] is not None else 0.0,
-                                key=f"actual_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
-                                label_visibility="collapsed"
-                            )
-                            if new_actual != kr['actual']:
-                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx][
-                                    'actual'] = new_actual
-                                save_data()
-                                st.rerun()
-                    with kr_col3:
-                        score_color = result['level_info']['color']
-                        st.markdown(
-                            f"<div style='background:{score_color}; color:white; padding:4px 8px; border-radius:4px; text-align:center; font-weight:bold;'>{result['score']:.2f}</div>",
-                            unsafe_allow_html=True)
+                df = pd.DataFrame(table_data)
+
+                # Editable table for Fact column
+                edited_df = st.data_editor(
+                    df,
+                    column_config={
+                        "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
+                        t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True,
+                                                                     width="medium"),
+                        t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
+                                                                 step=1, format="%.1f"),
+                        "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f",
+                                                               width="small"),
+                    },
+                    hide_index=True,
+                    use_container_width=True,
+                    key=f"editor_d{dept_idx}_o{obj_idx}_{objective['id']}"
+                )
+
+                # Update actual values from edited dataframe
+                for i, row in edited_df.iterrows():
+                    if i < len(krs):
+                        new_actual = row[t("fact")]
+                        if new_actual != krs[i]['actual']:
+                            st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i]['actual'] = new_actual
+                            save_data()
+                            st.rerun()
 
                 # Results breakdown table (without weights)
                 st.markdown(f"#### {t('results_breakdown')}")
