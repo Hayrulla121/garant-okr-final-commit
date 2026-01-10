@@ -667,7 +667,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 with col2:
                     new_val = st.number_input(
                         t("value"),
-                        value=float(kr['actual']),
+                        value=float(kr['actual']) if kr['actual'] is not None else 0.0,
                         key=f"edit_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
                         label_visibility="collapsed"
                     )
@@ -683,9 +683,6 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 ]
                 save_data()
                 st.rerun()
-
-        # Close the frame containers for compact view
-        st.markdown("</div></div>", unsafe_allow_html=True)
 
     else:
         # FULL VIEW - Original detailed display with all tables and functionality wrapped in frame
@@ -734,7 +731,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         else:
                             new_actual = st.number_input(
                                 t("fact"),
-                                value=float(kr['actual']),
+                                value=float(kr['actual']) if kr['actual'] is not None else 0.0,
                                 key=f"actual_d{dept_idx}_o{obj_idx}_kr{kr_idx}",
                                 label_visibility="collapsed"
                             )
@@ -1087,9 +1084,7 @@ def inject_global_css():
     .main {
         background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     }
-    .stApp {
-        margin-top: -100px !important;
-    }
+    ß
 
     /* ===== AGGRESSIVE TOP SPACE REMOVAL ===== */
     /* Remove default Streamlit padding */
@@ -1306,7 +1301,7 @@ def main():
     col_spacer_top, col_lang = st.columns([5, 1])
     with col_lang:
         lang_options = {"en": "🇬🇧 EN", "ru": "🇷🇺 RU", "uz": "🇺🇿 UZ"}
-        selected_lang = st.selectbox("", list(lang_options.keys()),
+        selected_lang = st.selectbox("Language", list(lang_options.keys()),
                                      format_func=lambda x: lang_options[x],
                                      index=list(lang_options.keys()).index(st.session_state.language),
                                      label_visibility="collapsed")
@@ -1323,8 +1318,7 @@ def main():
     col_toggle, col_spacer = st.columns([0.1, 0.9])
     with col_toggle:
         if st.button("◀" if not st.session_state.sidebar_collapsed else "▶",
-                     key="sidebar_toggle",
-                     help=t("toggle_sidebar")):
+                     key="sidebar_toggle"):
             st.session_state.sidebar_collapsed = not st.session_state.sidebar_collapsed
             st.rerun()
 
