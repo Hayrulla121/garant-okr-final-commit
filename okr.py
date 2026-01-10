@@ -604,77 +604,78 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
         else:
             weight_badge_html = ""
 
-        st.markdown(f"""
-            <div style='background:{THEME['card_bg']}; border:1px solid {THEME['card_border']}; border-radius:12px; padding:0; margin-bottom:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); overflow:hidden; transition:all 0.2s ease;'>
-                <div style='padding:18px 20px; border-bottom:1px solid {THEME['card_border']}; background:linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);'>
+        # Use Streamlit container with border for the card
+        with st.container(border=True):
+            # Header section
+            st.markdown(f"""
+                <div style='background:linear-gradient(180deg, {avg_level['color']}08 0%, #ffffff 100%); padding:16px; margin-bottom:16px; border-bottom:3px solid {avg_level['color']}; border-radius:8px 8px 0 0;'>
                     <div style='display:flex; justify-content:space-between; align-items:flex-start; gap:12px;'>
-                        <h3 style='margin:0; font-size:15px; color:{THEME['text_primary']}; font-weight:600; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.4;'>{objective['name']}</h3>
-                        <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:white; padding:6px 14px; border-radius:20px; font-size:14px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 2px 8px {avg_level['color']}40;'>{avg_score:.2f}</div>
+                        <h3 style='margin:0; font-size:16px; color:{THEME['text_primary']}; font-weight:700; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.4;'>📋 {objective['name']}</h3>
+                        <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:white; padding:8px 16px; border-radius:20px; font-size:15px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 3px 10px {avg_level['color']}50;'>{avg_score:.2f}</div>
                     </div>
-                    <div style='margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;'>
-                        <span style='display:inline-block; padding:5px 12px; background:{avg_level['color']}12; color:{avg_level['color']}; border-radius:6px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
-                        <span style='display:inline-block; padding:5px 12px; background:#f1f5f9; color:{THEME['text_secondary']}; border-radius:6px; font-size:11px; font-weight:500;'>{len(krs)} Key Results</span>
+                    <div style='margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;'>
+                        <span style='display:inline-block; padding:6px 14px; background:{avg_level['color']}15; color:{avg_level['color']}; border:1px solid {avg_level['color']}30; border-radius:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
+                        <span style='display:inline-block; padding:6px 14px; background:#f1f5f9; color:{THEME['text_secondary']}; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600;'>{len(krs)} KRs</span>
                         {weight_badge_html}
                     </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        gauge_html = create_gauge(avg_score, compact=True)
-        components.html(gauge_html, height=140)
+            gauge_html = create_gauge(avg_score, compact=False)
+            components.html(gauge_html, height=260)
 
-        # Editable table for facts
-        table_data = []
-        for kr_idx, kr in enumerate(krs):
-            result = results[kr_idx]
-            table_data.append({
-                "KR": f"KR{kr_idx + 1}",
-                t("key_result"): kr['name'],
-                t("fact"): kr['actual'],
-                "Score": result['score'],
-            })
-
-        df = pd.DataFrame(table_data)
-
-        # Editable table for Fact column
-        edited_df = st.data_editor(
-            df,
-            column_config={
-                "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
-                t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True, width="medium"),
-                t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
-                                                         step=1, format="%.1f"),
-                "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
-            },
-            hide_index=True,
-            use_container_width=True,
-            key=f"grid_editor_d{dept_idx}_o{obj_idx}_{objective['id']}"
-        )
-
-        # Update actual values from edited dataframe
-        for i, row in edited_df.iterrows():
-            if i < len(krs):
-                new_actual = row[t("fact")]
-                if new_actual != krs[i]['actual']:
-                    st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i]['actual'] = new_actual
-                    save_data()
-                    st.rerun()
-
-        with st.expander(f"🗑️ {t('delete_krs')}", expanded=False):
+            # Editable table for facts
+            table_data = []
             for kr_idx, kr in enumerate(krs):
-                if st.button(f"{t('delete')} KR{kr_idx + 1}", key=f"del_grid_kr_d{dept_idx}_o{obj_idx}_{kr['id']}"):
-                    st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'] = [
-                        k for k in krs if k['id'] != kr['id']
+                result = results[kr_idx]
+                table_data.append({
+                    "KR": f"KR{kr_idx + 1}",
+                    t("key_result"): kr['name'],
+                    t("fact"): kr['actual'],
+                    "Score": result['score'],
+                })
+
+            df = pd.DataFrame(table_data)
+
+            # Editable table for Fact column
+            edited_df = st.data_editor(
+                df,
+                column_config={
+                    "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
+                    t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True, width="medium"),
+                    t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
+                                                             step=1, format="%.1f"),
+                    "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
+                },
+                hide_index=True,
+                use_container_width=True,
+                key=f"grid_editor_d{dept_idx}_o{obj_idx}_{objective['id']}"
+            )
+
+            # Update actual values from edited dataframe
+            for i, row in edited_df.iterrows():
+                if i < len(krs):
+                    new_actual = row[t("fact")]
+                    if new_actual != krs[i]['actual']:
+                        st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i]['actual'] = new_actual
+                        save_data()
+                        st.rerun()
+
+            with st.expander(f"🗑️ {t('delete_krs')}", expanded=False):
+                for kr_idx, kr in enumerate(krs):
+                    if st.button(f"{t('delete')} KR{kr_idx + 1}", key=f"del_grid_kr_d{dept_idx}_o{obj_idx}_{kr['id']}"):
+                        st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'] = [
+                            k for k in krs if k['id'] != kr['id']
+                        ]
+                        save_data()
+                        st.rerun()
+
+                if st.button(f"🗑️ {t('delete_objective')}", key=f"del_obj_d{dept_idx}_o{obj_idx}", type="secondary"):
+                    st.session_state.departments[dept_idx]['objectives'] = [
+                        o for o in st.session_state.departments[dept_idx]['objectives'] if o['id'] != objective['id']
                     ]
                     save_data()
                     st.rerun()
-
-            if st.button(f"🗑️ {t('delete_objective')}", key=f"del_obj_d{dept_idx}_o{obj_idx}", type="secondary"):
-                st.session_state.departments[dept_idx]['objectives'] = [
-                    o for o in st.session_state.departments[dept_idx]['objectives'] if o['id'] != objective['id']
-                ]
-                save_data()
-                st.rerun()
 
     else:
         # FULL VIEW - Original detailed display with all tables and functionality wrapped in frame
