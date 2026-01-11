@@ -636,14 +636,23 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
             df = pd.DataFrame(table_data)
 
+            # Check if there are any qualitative metrics
+            has_qualitative = any(kr['metric_type'] == 'qualitative' for kr in krs)
+
             # Editable table for Fact column
+            # Use TextColumn if there are qualitative metrics, NumberColumn otherwise
+            if has_qualitative:
+                fact_column_config = st.column_config.TextColumn(t("fact"), width="small")
+            else:
+                fact_column_config = st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
+                                                                   step=1, format="%.1f")
+
             edited_df = st.data_editor(
                 df,
                 column_config={
                     "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
                     t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True, width="medium"),
-                    t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
-                                                             step=1, format="%.1f"),
+                    t("fact"): fact_column_config,
                     "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
                 },
                 hide_index=True,
@@ -705,15 +714,24 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
                 df = pd.DataFrame(table_data)
 
+                # Check if there are any qualitative metrics
+                has_qualitative = any(kr['metric_type'] == 'qualitative' for kr in krs)
+
                 # Editable table for Fact column
+                # Use TextColumn if there are qualitative metrics, NumberColumn otherwise
+                if has_qualitative:
+                    fact_column_config = st.column_config.TextColumn(t("fact"), width="small")
+                else:
+                    fact_column_config = st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
+                                                                       step=1, format="%.1f")
+
                 edited_df = st.data_editor(
                     df,
                     column_config={
                         "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
                         t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True,
                                                                      width="medium"),
-                        t("fact"): st.column_config.NumberColumn(t("fact"), min_value=-1000, max_value=10000,
-                                                                 step=1, format="%.1f"),
+                        t("fact"): fact_column_config,
                         "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f",
                                                                width="small"),
                     },
