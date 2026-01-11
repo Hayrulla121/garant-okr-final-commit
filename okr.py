@@ -889,8 +889,149 @@ def load_data():
     return [], 'en'
 
 
+def _create_score_formula(row: int, metric_type: str) -> str:
+    """Create Excel formula for score calculation based on metric type"""
+    # Column references
+    actual_col = 'F'
+    type_col = 'E'
+    below_col = 'H'
+    meets_col = 'I'
+    good_col = 'J'
+    very_good_col = 'K'
+    exceptional_col = 'L'
+
+    # Build cell references for this row
+    actual = f'{actual_col}{row}'
+    below = f'{below_col}{row}'
+    meets = f'{meets_col}{row}'
+    good = f'{good_col}{row}'
+    very_good = f'{very_good_col}{row}'
+    exceptional = f'{exceptional_col}{row}'
+    type_cell = f'{type_col}{row}'
+
+    # Qualitative formula (for A/B/C/D/E grades)
+    qualitative_formula = f'''IF({actual}="A",5,IF({actual}="B",4.75,IF({actual}="C",4.5,IF({actual}="D",4.25,3))))'''
+
+    # Higher is better formula
+    higher_better_formula = f'''IF({actual}>={exceptional},5,IF({actual}>={very_good},4.75+({actual}-{very_good})/MAX({exceptional}-{very_good},1)*0.24,IF({actual}>={good},4.5+({actual}-{good})/MAX({very_good}-{good},1)*0.24,IF({actual}>={meets},4.25+({actual}-{meets})/MAX({good}-{meets},1)*0.24,IF({actual}>={below},3+({actual}-{below})/MAX({meets}-{below},1)*1.24,3)))))'''
+
+    # Lower is better formula
+    lower_better_formula = f'''IF({actual}<={exceptional},5,IF({actual}<={very_good},4.75+(1-({actual}-{exceptional})/MAX({very_good}-{exceptional},1))*0.24,IF({actual}<={good},4.5+(1-({actual}-{very_good})/MAX({good}-{very_good},1))*0.24,IF({actual}<={meets},4.25+(1-({actual}-{good})/MAX({meets}-{good},1))*0.24,IF({actual}<={below},3+(1-({actual}-{meets})/MAX({below}-{meets},1))*1.24,3)))))'''
+
+    # Main formula that checks metric type
+    if metric_type == 'qualitative':
+        return f'={qualitative_formula}'
+    elif metric_type == 'higher_better':
+        return f'={higher_better_formula}'
+    else:  # lower_better
+        return f'={lower_better_formula}'
+
+
+def _create_performance_level_formula(row: int) -> str:
+    """Create Excel formula for performance level categorization"""
+    score_cell = f'M{row}'
+
+    # Formula to categorize score into performance levels
+    formula = f'''IF({score_cell}>=5,"Exceptional",IF({score_cell}>=4.75,"Very Good",IF({score_cell}>=4.5,"Good",IF({score_cell}>=4.25,"Meets","Below"))))'''
+
+    return f'={formula}'
+
+
+def _apply_conditional_formatting(ws, max_row: int, colors: dict):
+    """Apply conditional formatting to score and performance level columns based on score values"""
+    from openpyxl.formatting.rule import Rule
+    from openpyxl.styles.differential import DifferentialStyle
+
+    # Define fill patterns for each performance level
+    below_fill = PatternFill(start_color=colors['below'], end_color=colors['below'], fill_type='solid')
+    meets_fill = PatternFill(start_color=colors['meets'], end_color=colors['meets'], fill_type='solid')
+    good_fill = PatternFill(start_color=colors['good'], end_color=colors['good'], fill_type='solid')
+    very_good_fill = PatternFill(start_color=colors['very_good'], end_color=colors['very_good'], fill_type='solid')
+    exceptional_fill = PatternFill(start_color=colors['exceptional'], end_color=colors['exceptional'], fill_type='solid')
+
+    white_font = Font(bold=True, color='FFFFFF')
+
+    # Apply conditional formatting to Score column (M)
+    # Excel evaluates rules in priority order (1 is highest priority)
+    # Add rules from highest priority (exceptional) to lowest (below)
+    score_range = f'M2:M{max_row-1}'
+
+    # Exceptional: >= 5.00 (priority 1 - check first)
+    rule1 = Rule(type='cellIs', operator='greaterThanOrEqual', formula=['5.00'],
+                 stopIfTrue=True,
+                 dxf=DifferentialStyle(fill=exceptional_fill, font=white_font))
+    rule1.priority = 1
+    ws.conditional_formatting.add(score_range, rule1)
+
+    # Very Good: 4.75 <= x < 5.00 (priority 2)
+    rule2 = Rule(type='cellIs', operator='between', formula=['4.75', '4.99'],
+                 stopIfTrue=True,
+                 dxf=DifferentialStyle(fill=very_good_fill, font=white_font))
+    rule2.priority = 2
+    ws.conditional_formatting.add(score_range, rule2)
+
+    # Good: 4.50 <= x < 4.75 (priority 3)
+    rule3 = Rule(type='cellIs', operator='between', formula=['4.50', '4.74'],
+                 stopIfTrue=True,
+                 dxf=DifferentialStyle(fill=good_fill, font=white_font))
+    rule3.priority = 3
+    ws.conditional_formatting.add(score_range, rule3)
+
+    # Meets: 4.25 <= x < 4.50 (priority 4)
+    rule4 = Rule(type='cellIs', operator='between', formula=['4.25', '4.49'],
+                 stopIfTrue=True,
+                 dxf=DifferentialStyle(fill=meets_fill, font=white_font))
+    rule4.priority = 4
+    ws.conditional_formatting.add(score_range, rule4)
+
+    # Below: < 4.25 (priority 5 - check last)
+    rule5 = Rule(type='cellIs', operator='lessThan', formula=['4.25'],
+                 stopIfTrue=True,
+                 dxf=DifferentialStyle(fill=below_fill, font=white_font))
+    rule5.priority = 5
+    ws.conditional_formatting.add(score_range, rule5)
+
+    # Apply conditional formatting to Performance Level column (N) based on Score column
+    level_range = f'N2:N{max_row-1}'
+
+    # Exceptional: when score >= 5.00 (priority 1)
+    lrule1 = Rule(type='expression', formula=[f'$M2>=5.00'],
+                  stopIfTrue=True,
+                  dxf=DifferentialStyle(fill=exceptional_fill, font=white_font))
+    lrule1.priority = 1
+    ws.conditional_formatting.add(level_range, lrule1)
+
+    # Very Good: when 4.75 <= score < 5.00 (priority 2)
+    lrule2 = Rule(type='expression', formula=[f'AND($M2>=4.75,$M2<5.00)'],
+                  stopIfTrue=True,
+                  dxf=DifferentialStyle(fill=very_good_fill, font=white_font))
+    lrule2.priority = 2
+    ws.conditional_formatting.add(level_range, lrule2)
+
+    # Good: when 4.50 <= score < 4.75 (priority 3)
+    lrule3 = Rule(type='expression', formula=[f'AND($M2>=4.50,$M2<4.75)'],
+                  stopIfTrue=True,
+                  dxf=DifferentialStyle(fill=good_fill, font=white_font))
+    lrule3.priority = 3
+    ws.conditional_formatting.add(level_range, lrule3)
+
+    # Meets: when 4.25 <= score < 4.50 (priority 4)
+    lrule4 = Rule(type='expression', formula=[f'AND($M2>=4.25,$M2<4.50)'],
+                  stopIfTrue=True,
+                  dxf=DifferentialStyle(fill=meets_fill, font=white_font))
+    lrule4.priority = 4
+    ws.conditional_formatting.add(level_range, lrule4)
+
+    # Below: when score < 4.25 (priority 5)
+    lrule5 = Rule(type='expression', formula=[f'$M2<4.25'],
+                  stopIfTrue=True,
+                  dxf=DifferentialStyle(fill=below_fill, font=white_font))
+    lrule5.priority = 5
+    ws.conditional_formatting.add(level_range, lrule5)
+
+
 def export_to_excel(departments):
-    """Export OKR data to Excel with color-coded formatting and qualitative support"""
+    """Export OKR data to Excel with interactive formulas for automatic recalculation"""
     wb = Workbook()
     ws = wb.active
     ws.title = "OKR Export"
@@ -933,8 +1074,10 @@ def export_to_excel(departments):
             kr_list = obj.get('key_results', [])
 
             for kr in kr_list:
-                # Calculate score
+                # Calculate initial score using Python (for fallback coloring)
                 result = calculate_score(kr['actual'], kr['metric_type'], kr.get('thresholds', {}))
+                initial_score = result['score']
+                initial_level = result['level']
 
                 # Determine metric type display
                 if kr['metric_type'] == 'qualitative':
@@ -971,24 +1114,35 @@ def export_to_excel(departments):
                     ws.cell(row=row_idx, column=11, value=th.get('very_good', 0))
                     ws.cell(row=row_idx, column=12, value=th.get('exceptional', 0))
 
-                ws.cell(row=row_idx, column=13, value=result['score'])
-                ws.cell(row=row_idx, column=14, value=get_level_label(result['level']))
+                # Create Excel formula for score calculation
+                score_formula = _create_score_formula(row_idx, kr['metric_type'])
+                ws.cell(row=row_idx, column=13, value=score_formula)
 
-                # Apply color formatting to performance level cell
-                level_cell = ws.cell(row=row_idx, column=14)
-                level_cell.fill = PatternFill(start_color=colors[result['level']],
-                                              end_color=colors[result['level']],
-                                              fill_type='solid')
-                level_cell.font = Font(bold=True, color='FFFFFF')
-                level_cell.alignment = Alignment(horizontal='center', vertical='center')
+                # Create Excel formula for performance level
+                perf_level_formula = _create_performance_level_formula(row_idx)
+                ws.cell(row=row_idx, column=14, value=perf_level_formula)
 
-                # Apply color formatting to score cell
+                # Get cells for formatting
                 score_cell = ws.cell(row=row_idx, column=13)
-                score_cell.fill = PatternFill(start_color=colors[result['level']],
-                                              end_color=colors[result['level']],
-                                              fill_type='solid')
+                level_cell = ws.cell(row=row_idx, column=14)
+
+                # Set number format for score (2 decimal places)
+                score_cell.number_format = '0.00'
+
+                # Apply BASE cell coloring based on initial calculated score
+                # This ensures correct colors when file is first opened
+                # Conditional formatting will override these when formulas recalculate
+                base_fill = PatternFill(start_color=colors[initial_level],
+                                       end_color=colors[initial_level],
+                                       fill_type='solid')
+
+                score_cell.fill = base_fill
                 score_cell.font = Font(bold=True, color='FFFFFF')
                 score_cell.alignment = Alignment(horizontal='center', vertical='center')
+
+                level_cell.fill = base_fill
+                level_cell.font = Font(bold=True, color='FFFFFF')
+                level_cell.alignment = Alignment(horizontal='center', vertical='center')
 
                 # Apply weight column styling (only objective weight)
                 obj_weight_cell = ws.cell(row=row_idx, column=3)
@@ -1031,6 +1185,9 @@ def export_to_excel(departments):
         dept_cell = ws.cell(row=dept_start_row, column=1)
         dept_cell.alignment = Alignment(horizontal='center', vertical='center')
         dept_cell.font = Font(bold=True)
+
+    # Apply conditional formatting to score and performance level columns
+    _apply_conditional_formatting(ws, row_idx, colors)
 
     ws.column_dimensions['A'].width = 20  # Department
     ws.column_dimensions['B'].width = 30  # Objective

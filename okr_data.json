@@ -107,7 +107,7 @@
                 "very_good": 85,
                 "exceptional": 100
               },
-              "actual": 93
+              "actual": 10
             },
             {
               "id": "c7ccf9f9-a1c7-48dd-90be-29bc8dc5d4e5",
@@ -364,9 +364,31 @@
               "actual": 0
             }
           ]
+        },
+        {
+          "id": "95f6177e-0539-4527-81a2-e6599ca3cb3c",
+          "name": "Test",
+          "weight": 0,
+          "key_results": [
+            {
+              "id": "72b7737c-9ed3-4c76-a701-c436c1e0bee3",
+              "name": "t1",
+              "metric_type": "qualitative",
+              "unit": "",
+              "description": "",
+              "thresholds": {
+                "below": 0,
+                "meets": 0,
+                "good": 0,
+                "very_good": 0,
+                "exceptional": 0
+              },
+              "actual": 80
+            }
+          ]
         }
       ]
     }
   ],
-  "language": "ru"
+  "language": "en"
 }
