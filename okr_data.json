@@ -23,7 +23,7 @@
                 "very_good": 100,
                 "exceptional": 120
               },
-              "actual": 80
+              "actual": 50
             },
             {
               "id": "fc2b1da4-f0f9-439b-a31d-79410afb8d97",
@@ -159,7 +159,7 @@
                 "very_good": 95,
                 "exceptional": 100
               },
-              "actual": 87
+              "actual": 0
             },
             {
               "id": "09bd73ae-2b8c-41c0-950f-02e7621a1038",
@@ -211,7 +211,7 @@
                 "very_good": 5,
                 "exceptional": 6
               },
-              "actual": "0"
+              "actual": "50"
             },
             {
               "id": "319da350-a9ff-4329-90cd-336426ce0e3c",
@@ -226,7 +226,7 @@
                 "very_good": 12,
                 "exceptional": 16
               },
-              "actual": "0"
+              "actual": "12"
             },
             {
               "id": "f338960b-84c7-4fac-b7fa-ece5ee3554ae",
@@ -242,7 +242,7 @@
                 "very_good": 0,
                 "exceptional": 0
               },
-              "actual": "C"
+              "actual": "A"
             }
           ]
         },
