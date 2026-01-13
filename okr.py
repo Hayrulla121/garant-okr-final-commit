@@ -669,7 +669,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         save_data()
                         st.rerun()
 
-            with st.expander(f"🗑️ {t('delete_krs')}", expanded=False):
+            with st.expander(f"{t('delete_krs')}", expanded=False):
                 for kr_idx, kr in enumerate(krs):
                     if st.button(f"{t('delete')} KR{kr_idx + 1}", key=f"del_grid_kr_d{dept_idx}_o{obj_idx}_{kr['id']}"):
                         st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'] = [
@@ -1455,10 +1455,8 @@ def main():
         st.session_state.new_krs = []
         st.session_state.initialized = True
 
-    # Top spacing and language selector
-    # st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-
-    col_spacer_top, col_lang = st.columns([5, 1])
+    # Language selector aligned to the right
+    col_lang = st.columns([5, 1])[1]
     with col_lang:
         lang_options = {"en": "🇬🇧 EN", "ru": "🇷🇺 RU", "uz": "🇺🇿 UZ"}
         selected_lang = st.selectbox("Language", list(lang_options.keys()),
@@ -1493,15 +1491,6 @@ def main():
     if not st.session_state.sidebar_collapsed:
         with col_sidebar:
             # === SIDEBAR ===
-            # Sidebar container with background
-            st.markdown(f"<style>.main .block-container {{padding-left: 0.5rem; padding-right: 0.5rem;}}</style>",
-                        unsafe_allow_html=True)
-
-            # Wrap entire sidebar in a styled container
-            st.markdown(
-                f"<div style='background:{THEME['sidebar_bg']}; padding:15px; border-radius:8px; border:1px solid {THEME['sidebar_border']};'>",
-                unsafe_allow_html=True)
-
             render_sidebar(st.session_state.departments)
 
             # Department navigation with dropdown/combo box
@@ -1569,9 +1558,6 @@ def main():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
-
-            # Close sidebar container
-        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_main:
         # === MAIN DASHBOARD AREA ===
