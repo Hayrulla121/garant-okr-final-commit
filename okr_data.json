@@ -23,7 +23,7 @@
                 "very_good": 100,
                 "exceptional": 120
               },
-              "actual": 100
+              "actual": 75
             },
             {
               "id": "fc2b1da4-f0f9-439b-a31d-79410afb8d97",
@@ -39,7 +39,7 @@
                 "very_good": 100,
                 "exceptional": 200
               },
-              "actual": 160
+              "actual": 60
             },
             {
               "id": "3b046434-bb69-43e5-9825-5ffef089eafb",
@@ -55,7 +55,7 @@
                 "very_good": 5,
                 "exceptional": 0
               },
-              "actual": 10
+              "actual": 20
             }
           ]
         },
@@ -77,7 +77,7 @@
                 "very_good": 90,
                 "exceptional": 100
               },
-              "actual": 80
+              "actual": 75
             },
             {
               "id": "592c9755-d0b3-43e0-8f75-99d3ffccc300",
@@ -92,7 +92,7 @@
                 "very_good": 1,
                 "exceptional": 0
               },
-              "actual": 0
+              "actual": 2
             },
             {
               "id": "484cf7a3-7fe7-4278-869a-6e19357f8c3b",
@@ -107,7 +107,7 @@
                 "very_good": 85,
                 "exceptional": 100
               },
-              "actual": 10
+              "actual": 75
             },
             {
               "id": "c7ccf9f9-a1c7-48dd-90be-29bc8dc5d4e5",
@@ -122,7 +122,7 @@
                 "very_good": 80,
                 "exceptional": 100
               },
-              "actual": 50
+              "actual": 30
             }
           ]
         },
@@ -144,7 +144,7 @@
                 "very_good": 1,
                 "exceptional": 0
               },
-              "actual": 0
+              "actual": 1
             },
             {
               "id": "c5d84f09-f65d-4110-83a9-77a070be6729",
@@ -159,7 +159,7 @@
                 "very_good": 95,
                 "exceptional": 100
               },
-              "actual": 100
+              "actual": 95
             },
             {
               "id": "09bd73ae-2b8c-41c0-950f-02e7621a1038",
@@ -174,7 +174,7 @@
                 "very_good": 1,
                 "exceptional": 0
               },
-              "actual": 8
+              "actual": 5
             },
             {
               "id": "65a7807e-24c4-48a3-a489-c2f961a23b98",
@@ -189,7 +189,7 @@
                 "very_good": 5,
                 "exceptional": 4
               },
-              "actual": 0
+              "actual": 6
             }
           ]
         },
@@ -211,7 +211,7 @@
                 "very_good": 5,
                 "exceptional": 6
               },
-              "actual": "50"
+              "actual": "9"
             },
             {
               "id": "319da350-a9ff-4329-90cd-336426ce0e3c",
@@ -226,7 +226,7 @@
                 "very_good": 12,
                 "exceptional": 16
               },
-              "actual": "12"
+              "actual": "2"
             },
             {
               "id": "f338960b-84c7-4fac-b7fa-ece5ee3554ae",
@@ -264,7 +264,7 @@
                 "very_good": 95,
                 "exceptional": 100
               },
-              "actual": 90
+              "actual": 60
             },
             {
               "id": "57770388-eca7-4921-b2c9-0243292e4eda",
@@ -279,7 +279,7 @@
                 "very_good": 5,
                 "exceptional": 0
               },
-              "actual": 0
+              "actual": 2
             },
             {
               "id": "aff0d3e5-4b63-481e-bd02-8cd0fc59ad04",
@@ -294,7 +294,7 @@
                 "very_good": 100,
                 "exceptional": 100
               },
-              "actual": 100
+              "actual": 95
             },
             {
               "id": "52f3595f-c3b6-4442-80d0-e1bfef79ceae",
@@ -309,7 +309,7 @@
                 "very_good": 8,
                 "exceptional": 9
               },
-              "actual": 8
+              "actual": 5
             }
           ]
         },
@@ -346,7 +346,7 @@
                 "very_good": 5,
                 "exceptional": 0
               },
-              "actual": 0
+              "actual": 10
             },
             {
               "id": "1ecb1da3-2455-41d4-91f0-fce7a17e3531",
@@ -361,12 +361,55 @@
                 "very_good": 5,
                 "exceptional": 0
               },
-              "actual": 0
+              "actual": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1857cf73-d2c4-4c32-b8df-9b8cc9c67a76",
+      "name": "IT",
+      "objectives": [
+        {
+          "id": "f838d66e-e100-43c9-92ac-7368f07c873b",
+          "name": "Frontend",
+          "weight": 0,
+          "key_results": [
+            {
+              "id": "dcbfc893-f40c-4863-bd32-7d12b7613116",
+              "name": "UI UX",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 70.0
+            },
+            {
+              "id": "eec32231-148d-4a38-a853-641d195380db",
+              "name": "Task in time",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "thresholds": {
+                "below": 0.0,
+                "meets": 60.0,
+                "good": 75.0,
+                "very_good": 90.0,
+                "exceptional": 100.0
+              },
+              "actual": 60.0
             }
           ]
         }
       ]
     }
   ],
-  "language": "en"
+  "language": "ru"
 }

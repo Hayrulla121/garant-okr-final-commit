@@ -28,7 +28,7 @@ TRANSLATIONS = {
         "type": "Type",
         "higher_better": "↑ Higher is better",
         "lower_better": "↓ Lower is better",
-        "qualitative": "📊 Qualitative (A/B/C/D/E)",
+        "qualitative": " Qualitative (A/B/C/D/E)",
         "unit": "Unit",
         "thresholds": "Thresholds",
         "add_kr": "➕ Add KR",
@@ -107,7 +107,7 @@ TRANSLATIONS = {
         "type": "Тип",
         "higher_better": "↑ Больше лучше",
         "lower_better": "↓ Меньше лучше",
-        "qualitative": "📊 Качественный (A/B/C/D/E)",
+        "qualitative": " Качественный (A/B/C/D/E)",
         "unit": "Единица",
         "thresholds": "Пороги",
         "add_kr": "➕ Добавить KR",
@@ -187,7 +187,7 @@ TRANSLATIONS = {
         "type": "Тури",
         "higher_better": "↑",
         "lower_better": "↓",
-        "qualitative": "📊 Сифат (A/B/C/D/E)",
+        "qualitative": " Сифат (A/B/C/D/E)",
         "unit": "Бирлик",
         "thresholds": "Чегаралар",
         "add_kr": "➕ KR Қўшиш",
@@ -562,7 +562,7 @@ def render_sidebar(departments):
     overall_level = get_level_for_score(avg_overall) if dept_scores else {"color": THEME['text_secondary']}
 
     st.markdown(
-        f"<h3 style='font-size:11px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 16px 0; font-weight:600;'>📊 {t('overview')}</h3>",
+        f"<h3 style='font-size:11px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 16px 0; font-weight:600;'> {t('overview')}</h3>",
         unsafe_allow_html=True)
 
     # Stats cards with gradient backgrounds
@@ -1552,7 +1552,7 @@ def main():
             # Export button - Excel only
             excel_data = export_to_excel(st.session_state.departments)
             st.download_button(
-                label="📊 " + t("export_excel"),
+                label="" + t("export_excel"),
                 data=excel_data,
                 file_name="okr_export.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1564,7 +1564,7 @@ def main():
 
         # Performance scale legend (simple title + colored boxes, no container)
         st.markdown(f"""
-            <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'>📊 {t('performance_scale')}</p>
+            <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'> {t('performance_scale')}</p>
         """, unsafe_allow_html=True)
 
         cols = st.columns(5)
@@ -1658,7 +1658,7 @@ def main():
                         th_exceptional = st.number_input(t("exceptional"), value=100.0, key="th_exceptional")
                 else:
                     st.info(
-                        "📊 Qualitative KRs use A/B/C/D/E grades: A=5.0 (Exceptional), B=4.75 (Very Good), C=4.50 (Good), D=4.25 (Meets), E=3.0 (Below)")
+                        " Qualitative KRs use A/B/C/D/E grades: A=5.0 (Exceptional), B=4.75 (Very Good), C=4.50 (Good), D=4.25 (Meets), E=3.0 (Below)")
                     th_below, th_meets, th_good, th_very_good, th_exceptional = 0, 0, 0, 0, 0
 
                 if st.button(t("add_kr")):
@@ -1681,7 +1681,7 @@ def main():
                         col1, col2, col3 = st.columns([4, 1, 1])
                         with col1:
                             if kr['metric_type'] == "qualitative":
-                                icon = "📊"
+                                icon = ""
                             else:
                                 icon = "↑" if kr['metric_type'] == "higher_better" else "↓"
                             st.write(f"**KR{i + 1}: {kr['name']}** ({icon})")
