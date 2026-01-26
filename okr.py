@@ -87,6 +87,13 @@ TRANSLATIONS = {
         "grade_e": "E - Below",
         "weighted_score": "Weighted Score",
         "dept_weighted_avg": "Dept. Weighted Average",
+        "weighted_formula": "Weighted Formula",
+        "kr_contribution": "KR Contribution",
+        "obj_contribution": "Objective Contribution",
+        "formula_breakdown": "Formula Breakdown",
+        "edit_kr": "Edit KR",
+        "edit_krs": "✏️ Edit Key Results",
+        "update": "Update",
     },
     "ru": {
         "title": "OKR Трекер",
@@ -167,6 +174,13 @@ TRANSLATIONS = {
         "grade_e": "E - Ниже",
         "weighted_score": "Взвешенная оценка",
         "dept_weighted_avg": "Взвеш. среднее отдела",
+        "weighted_formula": "Взвешенная формула",
+        "kr_contribution": "Вклад KR",
+        "obj_contribution": "Вклад цели",
+        "formula_breakdown": "Разбивка формулы",
+        "edit_kr": "Редактировать KR",
+        "edit_krs": "✏️ Редактировать Ключевые Результаты",
+        "update": "Обновить",
     },
     "uz": {
         "title": "OKR Трекер",
@@ -246,6 +260,13 @@ TRANSLATIONS = {
         "grade_e": "E - Ёмон",
         "weighted_score": "Вазнли баҳо",
         "dept_weighted_avg": "Бўлим вазнли ўртача",
+        "weighted_formula": "Вазнли формула",
+        "kr_contribution": "KR ҳиссаси",
+        "obj_contribution": "Мақсад ҳиссаси",
+        "formula_breakdown": "Формула тафсилоти",
+        "edit_kr": "KR таҳрирлаш",
+        "edit_krs": "✏️ Калит Натижаларни Таҳрирлаш",
+        "update": "Янгилаш",
     }
 }
 
@@ -395,42 +416,97 @@ def score_to_percentage(score: float) -> float:
 
 
 def calculate_weighted_objective_score(objective: dict) -> dict:
-    """Calculate simple average score for an objective."""
+    """
+    Calculate weighted score for an Objective (weighted average of KR scores)
+    Formula: OKR = (KR1 × weight1) + (KR2 × weight2) + ... / totalWeight
+    Example: KR1(4.5 × 60%) + KR2(4.7 × 30%) + KR3(4.8 × 10%) = 4.59
+    """
     krs = objective.get('key_results', [])
     if not krs:
-        return {"score": 0, "level": get_level_for_score(0)}
+        return {"score": 0, "level": get_level_for_score(0), "results": [], "formula_parts": [], "total_weight": 0}
 
     results = []
+    formula_parts = []
+    weighted_sum = 0
+    total_weight = 0
+
     for kr in krs:
         result = calculate_score(kr['actual'], kr['metric_type'], kr.get('thresholds', {}))
         results.append(result)
 
-    # Calculate simple average
-    avg_score = sum(r['score'] for r in results) / len(results) if results else 0
+        # Get KR weight (default to equal distribution if not set)
+        kr_weight = kr.get('weight') or 0
+
+        weighted_sum += result['score'] * kr_weight
+        total_weight += kr_weight
+
+        # Store formula part for display
+        formula_parts.append({
+            'name': kr['name'],
+            'score': result['score'],
+            'weight': kr_weight,
+            'weighted_score': result['score'] * kr_weight / 100 if kr_weight > 0 else 0
+        })
+
+    # Calculate weighted average
+    if total_weight > 0:
+        avg_score = weighted_sum / total_weight
+    else:
+        # Fallback to simple average if no weights defined
+        avg_score = sum(r['score'] for r in results) / len(results) if results else 0
 
     return {
         "score": round(avg_score, 2),
         "level": get_level_for_score(avg_score),
-        "results": results
+        "results": results,
+        "formula_parts": formula_parts,
+        "total_weight": total_weight
     }
 
 
 def calculate_weighted_department_score(department: dict) -> dict:
-    """Calculate weighted average score for a department based on objective weights."""
+    """
+    Calculate weighted score for a Department based on objective weights.
+    Formula: Dept = (Obj1 × weight1) + (Obj2 × weight2) + ... / totalWeight
+    """
     objectives = department.get('objectives', [])
     if not objectives:
-        return {"score": 0, "level": get_level_for_score(0)}
+        return {"score": 0, "level": get_level_for_score(0), "objective_scores": [], "formula_parts": [],
+                "total_weight": 0}
+
+    # Count objectives with key results for default weight calculation
+    objectives_with_krs = [obj for obj in objectives if obj.get('key_results')]
+
+    if not objectives_with_krs:
+        return {"score": 0, "level": get_level_for_score(0), "objective_scores": [], "formula_parts": [],
+                "total_weight": 0}
 
     total_weight = 0
     weighted_sum = 0
     obj_scores = []
+    formula_parts = []
 
     for obj in objectives:
-        obj_weight = obj.get('weight') or (100 / len(objectives))  # Default to equal weight, handles None
+        # Skip objectives with no key results
+        if not obj.get('key_results'):
+            continue
+
+        # Get objective weight (default to equal distribution if not set)
+        obj_weight = obj.get('weight') or (100.0 / len(objectives_with_krs))
+
         obj_result = calculate_weighted_objective_score(obj)
         obj_scores.append(obj_result)
+
         weighted_sum += obj_result['score'] * obj_weight
         total_weight += obj_weight
+
+        # Store formula part for display
+        formula_parts.append({
+            'name': obj['name'],
+            'score': obj_result['score'],
+            'weight': obj_weight,
+            'weighted_score': obj_result['score'] * obj_weight / 100 if obj_weight > 0 else 0
+        })
 
     # Calculate weighted average (normalize if weights don't sum to 100)
     if total_weight > 0:
@@ -442,9 +518,9 @@ def calculate_weighted_department_score(department: dict) -> dict:
         "score": round(avg_score, 2),
         "level": get_level_for_score(avg_score),
         "objective_scores": obj_scores,
+        "formula_parts": formula_parts,
         "total_weight": total_weight
     }
-
 
 def create_gauge(score: float, compact: bool = False) -> str:
     """Returns HTML string with ECharts gauge"""
@@ -531,13 +607,16 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     formatter: function (value) {{
                         return value.toFixed(2) + '\\n({percentage}%)';
                     }},
-                    color: '#2c3e50',
+                    color: '{level_info['color']}',
                     fontFamily: 'Arial',
                     fontWeight: 'bold'
                 }},
                 data: [{{
                     value: {score},
-                    name: '{level_label}'
+                    name: '{level_label}',
+                    itemStyle: {{
+                        color: '{level_info['color']}'
+                    }}
                 }}]
             }}]
         }};
@@ -573,12 +652,21 @@ def render_sidebar(departments):
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-        <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
-            <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
-            <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('weighted_score')}</div>
-        </div>
-    """, unsafe_allow_html=True)
+    # Show department weighted average breakdown
+    if dept_scores:
+        st.markdown(f"""
+            <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
+                <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
+                <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('dept_weighted_avg')}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
+                <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
+                <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('weighted_score')}</div>
+            </div>
+        """, unsafe_allow_html=True)
 
 
 def render_objective_card(objective, dept_idx, obj_idx, compact=True):
@@ -623,15 +711,19 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
             gauge_html = create_gauge(avg_score, compact=False)
             components.html(gauge_html, height=260)
 
-            # Editable table for facts
+            # Editable table for facts with weight information
             table_data = []
             for kr_idx, kr in enumerate(krs):
                 result = results[kr_idx]
+                kr_weight = kr.get('weight', 0) or 0
+                weighted_contribution = result['score'] * kr_weight / 100 if kr_weight > 0 else 0
                 table_data.append({
                     "KR": f"KR{kr_idx + 1}",
                     t("key_result"): kr['name'],
+                    t("weight"): f"{kr_weight}%",
                     t("fact"): kr['actual'],
                     "Score": result['score'],
+                    "Weighted": round(weighted_contribution, 2),
                 })
 
             df = pd.DataFrame(table_data)
@@ -652,8 +744,10 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 column_config={
                     "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
                     t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True, width="medium"),
+                    t("weight"): st.column_config.TextColumn(t("weight"), disabled=True, width="small"),
                     t("fact"): fact_column_config,
                     "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f", width="small"),
+                    "Weighted": st.column_config.NumberColumn("Weighted", disabled=True, format="%.2f", width="small"),
                 },
                 hide_index=True,
                 use_container_width=True,
@@ -701,15 +795,19 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
             col_table, col_gauge = st.columns([3, 1])
 
             with col_table:
-                # Build DataFrame for editable table (KR, Key Result, Fact, Score only)
+                # Build DataFrame for editable table with weight information
                 table_data = []
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
+                    kr_weight = kr.get('weight', 0) or 0
+                    weighted_contribution = result['score'] * kr_weight / 100 if kr_weight > 0 else 0
                     table_data.append({
                         "KR": f"KR{kr_idx + 1}",
                         t("key_result"): kr['name'],
+                        t("weight"): f"{kr_weight}%",
                         t("fact"): kr['actual'],
                         "Score": result['score'],
+                        "Weighted": round(weighted_contribution, 2),
                     })
 
                 df = pd.DataFrame(table_data)
@@ -731,9 +829,12 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         "KR": st.column_config.TextColumn("KR", disabled=True, width="small"),
                         t("key_result"): st.column_config.TextColumn(t("key_result"), disabled=True,
                                                                      width="medium"),
+                        t("weight"): st.column_config.TextColumn(t("weight"), disabled=True, width="small"),
                         t("fact"): fact_column_config,
                         "Score": st.column_config.NumberColumn("Score", disabled=True, format="%.2f",
                                                                width="small"),
+                        "Weighted": st.column_config.NumberColumn("Weighted", disabled=True, format="%.2f",
+                                                                  width="small"),
                     },
                     hide_index=True,
                     use_container_width=True,
@@ -752,7 +853,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 # Results breakdown table (without weights)
                 st.markdown(f"#### {t('results_breakdown')}")
 
-                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>3.00</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>&lt;4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
@@ -784,14 +885,131 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     kr_desc = kr.get('description', '') or kr['name']
                     kr_desc_escaped = kr_desc.replace('"', '&quot;').replace("'", "&#39;")
 
-                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{result['score']:.2f}</td></tr>"
+                    # Get KR weight and calculate weighted contribution
+                    kr_weight = kr.get('weight', 0) or 0
+                    weighted_contribution = result['score'] * kr_weight / 100 if kr_weight > 0 else 0
 
-                # Simple average formula display (without weights)
-                kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
-                html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='8' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                    # Show score with weight contribution in result cell
+                    if kr_weight > 0:
+                        score_display = f"{result['score']:.2f}<br><small style='font-size:9px;'>x {kr_weight}% = {weighted_contribution:.2f}</small>"
+                    else:
+                        score_display = f"{result['score']:.2f}"
+
+                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#FFF2CC; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
+
+                # Weighted Calculation Row - matches Java frontend format
+                if obj_result.get('total_weight', 0) > 0:
+                    # Build weighted formula string: OKR = (KR1 x w1%) + (KR2 x w2%) + ...
+                    formula_parts = []
+                    for kr_idx, kr in enumerate(krs):
+                        kr_score = results[kr_idx]['score']
+                        kr_weight = kr.get('weight', 0) or 0
+                        formula_parts.append(f"({kr_score:.2f} x {kr_weight}%)")
+
+                    formula_str = " + ".join(formula_parts)
+
+                    # Calculate intermediate sum
+                    weighted_contributions = sum((results[i]['score'] * (krs[i].get('weight', 0) or 0) / 100) for i in range(len(krs)))
+
+                    # Show normalization if weights don't sum to 100
+                    total_weight = sum((kr.get('weight', 0) or 0) for kr in krs)
+                    if total_weight != 100 and total_weight > 0:
+                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                    else:
+                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                else:
+                    # Fallback to simple average formula (no weights)
+                    kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
+                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
 
                 table_height = 60 + (len(krs) * 38) + 45
                 components.html(html_table, height=table_height, scrolling=False)
+
+                # Edit KR section
+                st.markdown(f"#### {t('edit_krs')}")
+                for kr_idx, kr in enumerate(krs):
+                    with st.expander(f"✏️ {t('edit_kr')} {kr_idx + 1}: {kr['name']}", expanded=False):
+                        ec1, ec2, ec3 = st.columns([3, 2, 1])
+                        with ec1:
+                            edit_name = st.text_input(t("kr_name"), value=kr['name'], key=f"edit_name_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                        with ec2:
+                            # Determine current metric type
+                            current_type_idx = 0 if kr['metric_type'] == "higher_better" else 1 if kr['metric_type'] == "lower_better" else 2
+                            edit_type = st.selectbox(
+                                t("type"),
+                                ["higher_better", "lower_better", "qualitative"],
+                                index=current_type_idx,
+                                format_func=lambda x: "↑ Higher is better" if x == "higher_better" else "↓ Lower is better" if x == "lower_better" else "⭐ Qualitative (A/B/C/D/E)",
+                                key=f"edit_type_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"
+                            )
+                        with ec3:
+                            edit_unit = st.text_input(t("unit"), value=kr.get('unit', '%'), key=f"edit_unit_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+
+                        # Description field
+                        edit_description = st.text_area(
+                            t("kr_description"),
+                            value=kr.get('description', ''),
+                            placeholder=t("kr_description_placeholder"),
+                            key=f"edit_desc_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}",
+                            height=68
+                        )
+
+                        # Weight field
+                        edit_weight = st.number_input(
+                            t("kr_weight"),
+                            value=float(kr.get('weight', 0) or 0),
+                            min_value=0.0,
+                            max_value=100.0,
+                            step=1.0,
+                            key=f"edit_weight_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"
+                        )
+
+                        # Thresholds - only show for quantitative metrics
+                        if edit_type != "qualitative":
+                            st.markdown("**Thresholds**")
+                            th = kr.get('thresholds', {})
+                            et1, et2, et3, et4, et5 = st.columns(5)
+                            with et1:
+                                st.markdown(f"<small style='color:#d9534f;'>● 3.00</small>", unsafe_allow_html=True)
+                                edit_below = st.number_input(t("below"), value=th.get('below', 0.0), key=f"edit_below_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            with et2:
+                                st.markdown(f"<small style='color:#f0ad4e;'>● 4.25</small>", unsafe_allow_html=True)
+                                edit_meets = st.number_input(t("meets"), value=th.get('meets', 60.0), key=f"edit_meets_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            with et3:
+                                st.markdown(f"<small style='color:#5cb85c;'>● 4.50</small>", unsafe_allow_html=True)
+                                edit_good = st.number_input(t("good"), value=th.get('good', 75.0), key=f"edit_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            with et4:
+                                st.markdown(f"<small style='color:#28a745;'>● 4.75</small>", unsafe_allow_html=True)
+                                edit_very_good = st.number_input(t("very_good"), value=th.get('very_good', 90.0), key=f"edit_very_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            with et5:
+                                st.markdown(f"<small style='color:#1e7b34;'>● 5.00</small>", unsafe_allow_html=True)
+                                edit_exc = st.number_input(t("exceptional"), value=th.get('exceptional', 100.0), key=f"edit_exc_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                        else:
+                            # For qualitative, set default thresholds (not used but needed for data structure)
+                            edit_below = 0.0
+                            edit_meets = 60.0
+                            edit_good = 75.0
+                            edit_very_good = 90.0
+                            edit_exc = 100.0
+
+                        if st.button(f"✅ {t('update')} KR{kr_idx + 1}", key=f"update_btn_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"):
+                            if edit_name.strip():
+                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx].update({
+                                    "name": edit_name.strip(),
+                                    "metric_type": edit_type,
+                                    "unit": edit_unit,
+                                    "description": edit_description.strip(),
+                                    "weight": edit_weight,
+                                    "thresholds": {
+                                        "below": edit_below,
+                                        "meets": edit_meets,
+                                        "good": edit_good,
+                                        "very_good": edit_very_good,
+                                        "exceptional": edit_exc
+                                    }
+                                })
+                                save_data()
+                                st.rerun()
 
                 st.markdown(f"#### {t('delete_krs')}")
                 del_cols = st.columns(len(krs) + 1)

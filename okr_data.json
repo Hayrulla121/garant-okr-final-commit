@@ -11,19 +11,19 @@
           "key_results": [
             {
               "id": "734d5548-1c37-4992-a920-28cfff81ac2a",
-              "name": "KR1.1 Проекты завершенные в срок (% от кол-ва проектов)",
+              "name": "Проекты завершенные в срок (% от кол-ва проектов)",
               "metric_type": "higher_better",
               "unit": "%",
-              "weight": 40,
+              "weight": 40.0,
               "description": "Процент проектов, которые были завершены в установленные сроки. Измеряется как отношение количества проектов, завершенных вовремя, к общему количеству проектов.",
               "thresholds": {
-                "below": 50,
-                "meets": 60,
+                "below": 30,
+                "meets": 40,
                 "good": 80,
                 "very_good": 100,
                 "exceptional": 120
               },
-              "actual": 75
+              "actual": 110
             },
             {
               "id": "fc2b1da4-f0f9-439b-a31d-79410afb8d97",
@@ -39,7 +39,7 @@
                 "very_good": 100,
                 "exceptional": 200
               },
-              "actual": 60
+              "actual": 96
             },
             {
               "id": "3b046434-bb69-43e5-9825-5ffef089eafb",
@@ -55,7 +55,7 @@
                 "very_good": 5,
                 "exceptional": 0
               },
-              "actual": 20
+              "actual": 18
             }
           ]
         },
@@ -122,7 +122,7 @@
                 "very_good": 80,
                 "exceptional": 100
               },
-              "actual": 30
+              "actual": 50
             }
           ]
         },
