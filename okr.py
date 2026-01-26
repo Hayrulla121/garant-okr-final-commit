@@ -93,6 +93,7 @@ TRANSLATIONS = {
         "formula_breakdown": "Formula Breakdown",
         "edit_kr": "Edit KR",
         "edit_krs": "✏️ Edit Key Results",
+        "edit_objective": "✏️ Edit Objective",
         "update": "Update",
     },
     "ru": {
@@ -180,6 +181,7 @@ TRANSLATIONS = {
         "formula_breakdown": "Разбивка формулы",
         "edit_kr": "Редактировать KR",
         "edit_krs": "✏️ Редактировать Ключевые Результаты",
+        "edit_objective": "✏️ Редактировать Цель",
         "update": "Обновить",
     },
     "uz": {
@@ -266,6 +268,7 @@ TRANSLATIONS = {
         "formula_breakdown": "Формула тафсилоти",
         "edit_kr": "KR таҳрирлаш",
         "edit_krs": "✏️ Калит Натижаларни Таҳрирлаш",
+        "edit_objective": "✏️ Мақсадни Таҳрирлаш",
         "update": "Янгилаш",
     }
 }
@@ -514,6 +517,7 @@ def calculate_weighted_department_score(department: dict) -> dict:
         "total_weight": total_weight
     }
 
+
 def create_gauge(score: float, compact: bool = False) -> str:
     """Returns HTML string with ECharts gauge - NEW SCALE: 4.25 to 5.00"""
     import random
@@ -753,7 +757,35 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 if i < len(krs):
                     new_actual = row[t("fact")]
                     if new_actual != krs[i]['actual']:
-                        st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i]['actual'] = new_actual
+                        st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i][
+                            'actual'] = new_actual
+                        save_data()
+                        st.rerun()
+
+            # Edit Objective in Grid view
+            with st.expander(f"{t('edit_objective')}", expanded=False):
+                grid_obj_col1, grid_obj_col2 = st.columns([3, 1])
+                with grid_obj_col1:
+                    grid_edit_obj_name = st.text_input(
+                        t("objective_name"),
+                        value=objective['name'],
+                        key=f"grid_edit_obj_name_d{dept_idx}_o{obj_idx}_{objective['id']}"
+                    )
+                with grid_obj_col2:
+                    grid_edit_obj_weight = st.number_input(
+                        t("objective_weight"),
+                        value=float(objective.get('weight', 0) or 0),
+                        min_value=0.0,
+                        max_value=100.0,
+                        step=1.0,
+                        key=f"grid_edit_obj_weight_d{dept_idx}_o{obj_idx}_{objective['id']}"
+                    )
+
+                if st.button(f"✅ {t('update')}", key=f"grid_update_obj_btn_d{dept_idx}_o{obj_idx}_{objective['id']}"):
+                    if grid_edit_obj_name.strip():
+                        st.session_state.departments[dept_idx]['objectives'][obj_idx][
+                            'name'] = grid_edit_obj_name.strip()
+                        st.session_state.departments[dept_idx]['objectives'][obj_idx]['weight'] = grid_edit_obj_weight
                         save_data()
                         st.rerun()
 
@@ -786,7 +818,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
             unsafe_allow_html=True)
 
         with st.expander(f"{objective['name']}", expanded=False):
-            col_table, col_gauge = st.columns([3, 1])
+            col_table, col_gauge = st.columns([2, 1])
 
             with col_table:
                 # Build DataFrame for editable table with weight information
@@ -840,7 +872,8 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     if i < len(krs):
                         new_actual = row[t("fact")]
                         if new_actual != krs[i]['actual']:
-                            st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i]['actual'] = new_actual
+                            st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][i][
+                                'actual'] = new_actual
                             save_data()
                             st.rerun()
 
@@ -903,7 +936,8 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     formula_str = " + ".join(formula_parts)
 
                     # Calculate intermediate sum
-                    weighted_contributions = sum((results[i]['score'] * (krs[i].get('weight', 0) or 0) / 100) for i in range(len(krs)))
+                    weighted_contributions = sum(
+                        (results[i]['score'] * (krs[i].get('weight', 0) or 0) / 100) for i in range(len(krs)))
 
                     # Show normalization if weights don't sum to 100
                     total_weight = sum((kr.get('weight', 0) or 0) for kr in krs)
@@ -916,7 +950,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
                     html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
 
-                table_height = 60 + (len(krs) * 38) + 45
+                table_height = 70 + (len(krs) * 48) + 60
                 components.html(html_table, height=table_height, scrolling=False)
 
                 # Edit KR section
@@ -925,19 +959,23 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     with st.expander(f"✏️ {t('edit_kr')} {kr_idx + 1}: {kr['name']}", expanded=False):
                         ec1, ec2, ec3 = st.columns([3, 2, 1])
                         with ec1:
-                            edit_name = st.text_input(t("kr_name"), value=kr['name'], key=f"edit_name_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            edit_name = st.text_input(t("kr_name"), value=kr['name'],
+                                                      key=f"edit_name_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                         with ec2:
                             # Determine current metric type
-                            current_type_idx = 0 if kr['metric_type'] == "higher_better" else 1 if kr['metric_type'] == "lower_better" else 2
+                            current_type_idx = 0 if kr['metric_type'] == "higher_better" else 1 if kr[
+                                                                                                       'metric_type'] == "lower_better" else 2
                             edit_type = st.selectbox(
                                 t("type"),
                                 ["higher_better", "lower_better", "qualitative"],
                                 index=current_type_idx,
-                                format_func=lambda x: "↑ Higher is better" if x == "higher_better" else "↓ Lower is better" if x == "lower_better" else "⭐ Qualitative (A/B/C/D/E)",
+                                format_func=lambda
+                                    x: "↑ Higher is better" if x == "higher_better" else "↓ Lower is better" if x == "lower_better" else "⭐ Qualitative (A/B/C/D/E)",
                                 key=f"edit_type_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"
                             )
                         with ec3:
-                            edit_unit = st.text_input(t("unit"), value=kr.get('unit', '%'), key=f"edit_unit_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            edit_unit = st.text_input(t("unit"), value=kr.get('unit', '%'),
+                                                      key=f"edit_unit_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
 
                         # Description field
                         edit_description = st.text_area(
@@ -965,16 +1003,20 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             et1, et2, et3, et4 = st.columns(4)
                             with et1:
                                 st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
-                                edit_below = st.number_input(t("below"), value=th.get('below', 0.0), key=f"edit_below_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                                edit_below = st.number_input(t("below"), value=th.get('below', 0.0),
+                                                             key=f"edit_below_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                             with et2:
                                 st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
-                                edit_meets = st.number_input(t("meets"), value=th.get('meets', 60.0), key=f"edit_meets_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                                edit_meets = st.number_input(t("meets"), value=th.get('meets', 60.0),
+                                                             key=f"edit_meets_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                             with et3:
                                 st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
-                                edit_good = st.number_input(t("good"), value=th.get('good', 75.0), key=f"edit_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                                edit_good = st.number_input(t("good"), value=th.get('good', 75.0),
+                                                            key=f"edit_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                             with et4:
                                 st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
-                                edit_exc = st.number_input(t("exceptional"), value=th.get('exceptional', 100.0), key=f"edit_exc_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                                edit_exc = st.number_input(t("exceptional"), value=th.get('exceptional', 100.0),
+                                                           key=f"edit_exc_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                         else:
                             # For qualitative, set default thresholds (not used but needed for data structure)
                             edit_below = 0.0
@@ -982,9 +1024,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             edit_good = 75.0
                             edit_exc = 100.0
 
-                        if st.button(f"✅ {t('update')} KR{kr_idx + 1}", key=f"update_btn_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"):
+                        if st.button(f"✅ {t('update')} KR{kr_idx + 1}",
+                                     key=f"update_btn_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"):
                             if edit_name.strip():
-                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][kr_idx].update({
+                                st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'][
+                                    kr_idx].update({
                                     "name": edit_name.strip(),
                                     "metric_type": edit_type,
                                     "unit": edit_unit,
@@ -1000,6 +1044,34 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                                 })
                                 save_data()
                                 st.rerun()
+
+                # Edit Objective section
+                with st.expander(f"{t('edit_objective')}: {objective['name']}", expanded=False):
+                    obj_col1, obj_col2 = st.columns([3, 1])
+                    with obj_col1:
+                        edit_obj_name = st.text_input(
+                            t("objective_name"),
+                            value=objective['name'],
+                            key=f"edit_obj_name_d{dept_idx}_o{obj_idx}_{objective['id']}"
+                        )
+                    with obj_col2:
+                        edit_obj_weight = st.number_input(
+                            t("objective_weight"),
+                            value=float(objective.get('weight', 0) or 0),
+                            min_value=0.0,
+                            max_value=100.0,
+                            step=1.0,
+                            key=f"edit_obj_weight_d{dept_idx}_o{obj_idx}_{objective['id']}"
+                        )
+
+                    if st.button(f"✅ {t('update')} {t('objective')}",
+                                 key=f"update_obj_btn_d{dept_idx}_o{obj_idx}_{objective['id']}"):
+                        if edit_obj_name.strip():
+                            st.session_state.departments[dept_idx]['objectives'][obj_idx][
+                                'name'] = edit_obj_name.strip()
+                            st.session_state.departments[dept_idx]['objectives'][obj_idx]['weight'] = edit_obj_weight
+                            save_data()
+                            st.rerun()
 
                 st.markdown(f"#### {t('delete_krs')}")
                 del_cols = st.columns(len(krs) + 1)
@@ -1038,6 +1110,16 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 add_description = st.text_area(t("kr_description"), placeholder=t("kr_description_placeholder"),
                                                key=f"add_desc_d{dept_idx}_o{obj_idx}", height=68)
 
+                # Weight field
+                add_weight = st.number_input(
+                    t("kr_weight"),
+                    value=0.0,
+                    min_value=0.0,
+                    max_value=100.0,
+                    step=1.0,
+                    key=f"add_weight_d{dept_idx}_o{obj_idx}"
+                )
+
                 at1, at2, at3, at4 = st.columns(4)
                 with at1:
                     st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
@@ -1057,6 +1139,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         st.session_state.departments[dept_idx]['objectives'][obj_idx]['key_results'].append({
                             "id": str(uuid.uuid4()), "name": add_name.strip(), "metric_type": add_type,
                             "unit": add_unit, "description": add_description.strip(),
+                            "weight": add_weight,
                             "thresholds": {"below": add_below, "meets": add_meets, "good": add_good,
                                            "exceptional": add_exc},
                             "actual": 0.0
@@ -1164,16 +1247,21 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict):
     from openpyxl.formatting.rule import Rule
     from openpyxl.styles.differential import DifferentialStyle
 
+    # Skip if no data rows (max_row must be at least 3 to have row 2 as data)
+    if max_row < 3:
+        return
+
     # Define fill patterns for each performance level
     below_fill = PatternFill(start_color=colors['below'], end_color=colors['below'], fill_type='solid')
     meets_fill = PatternFill(start_color=colors['meets'], end_color=colors['meets'], fill_type='solid')
     good_fill = PatternFill(start_color=colors['good'], end_color=colors['good'], fill_type='solid')
-    exceptional_fill = PatternFill(start_color=colors['exceptional'], end_color=colors['exceptional'], fill_type='solid')
+    exceptional_fill = PatternFill(start_color=colors['exceptional'], end_color=colors['exceptional'],
+                                   fill_type='solid')
 
     white_font = Font(bold=True, color='FFFFFF')
 
     # Apply conditional formatting to Score column (M) - NEW SCALE (max 5.00)
-    score_range = f'M2:M{max_row-1}'
+    score_range = f'M2:M{max_row - 1}'
 
     # Exceptional: >= 5.00 (priority 1 - check first)
     rule1 = Rule(type='cellIs', operator='greaterThanOrEqual', formula=['5.00'],
@@ -1204,7 +1292,7 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict):
     ws.conditional_formatting.add(score_range, rule4)
 
     # Apply conditional formatting to Performance Level column (N) based on Score column - NEW SCALE (max 5.00)
-    level_range = f'N2:N{max_row-1}'
+    level_range = f'N2:N{max_row - 1}'
 
     # Exceptional: when score >= 5.00 (priority 1)
     lrule1 = Rule(type='expression', formula=[f'$M2>=5.00'],
@@ -1337,8 +1425,8 @@ def export_to_excel(departments):
                 # This ensures correct colors when file is first opened
                 # Conditional formatting will override these when formulas recalculate
                 base_fill = PatternFill(start_color=colors[initial_level],
-                                       end_color=colors[initial_level],
-                                       fill_type='solid')
+                                        end_color=colors[initial_level],
+                                        fill_type='solid')
 
                 score_cell.fill = base_fill
                 score_cell.font = Font(bold=True, color='FFFFFF')
@@ -1390,8 +1478,9 @@ def export_to_excel(departments):
         dept_cell.alignment = Alignment(horizontal='center', vertical='center')
         dept_cell.font = Font(bold=True)
 
-    # Apply conditional formatting to score and performance level columns
-    _apply_conditional_formatting(ws, row_idx, colors)
+    # Apply conditional formatting to score and performance level columns (only if there's data)
+    if row_idx > 2:
+        _apply_conditional_formatting(ws, row_idx, colors)
 
     ws.column_dimensions['A'].width = 20  # Department
     ws.column_dimensions['B'].width = 30  # Objective
@@ -1823,6 +1912,16 @@ def main():
                 kr_description = st.text_area(t("kr_description"), placeholder=t("kr_description_placeholder"),
                                               key="kr_description_input", height=68)
 
+                # Weight field
+                kr_weight = st.number_input(
+                    t("kr_weight"),
+                    value=0.0,
+                    min_value=0.0,
+                    max_value=100.0,
+                    step=1.0,
+                    key="kr_weight_input"
+                )
+
                 # Show thresholds only for quantitative metrics
                 if kr_type != "qualitative":
                     st.markdown(f"**{t('thresholds')}:**")
@@ -1842,7 +1941,7 @@ def main():
                 else:
                     st.info(
                         " Qualitative KRs use A/B/C/D/E grades: A=5.00 (Exceptional), B=4.75 (Good), C=4.50 (Meets), D=4.25 (Below), E=4.25 (Below)")
-                    th_below, th_meets, th_good, th_very_good, th_exceptional = 0, 0, 0, 0, 0
+                    th_below, th_meets, th_good, th_exceptional = 0, 0, 0, 0
 
                 if st.button(t("add_kr")):
                     if kr_name.strip():
@@ -1850,9 +1949,9 @@ def main():
                             "id": str(uuid.uuid4()), "name": kr_name.strip(), "metric_type": kr_type,
                             "unit": "" if kr_type == "qualitative" else kr_unit,
                             "description": kr_description.strip(),
+                            "weight": kr_weight,
                             "thresholds": {"below": th_below, "meets": th_meets,
-                                           "good": th_good, "very_good": th_very_good,
-                                           "exceptional": th_exceptional},
+                                           "good": th_good, "exceptional": th_exceptional},
                             "actual": "E" if kr_type == "qualitative" else 0.0
                         })
                         st.rerun()
@@ -1864,10 +1963,11 @@ def main():
                         col1, col2, col3 = st.columns([4, 1, 1])
                         with col1:
                             if kr['metric_type'] == "qualitative":
-                                icon = ""
+                                icon = "⭐"
                             else:
                                 icon = "↑" if kr['metric_type'] == "higher_better" else "↓"
-                            st.write(f"**KR{i + 1}: {kr['name']}** ({icon})")
+                            kr_w = kr.get('weight', 0)
+                            st.write(f"**KR{i + 1}: {kr['name']}** ({icon}) - {t('weight')}: {kr_w}%")
                         with col2:
                             if st.button(f"❌", key=f"rm_{kr['id']}"):
                                 st.session_state.new_krs = [k for k in st.session_state.new_krs if k['id'] != kr['id']]
