@@ -61,7 +61,7 @@ TRANSLATIONS = {
         "no_krs": "No Key Results. Add some below.",
         "delete_krs": "🗑️ Delete Key Results",
         "performance_level": "Performance Level",
-        "below": "Below", "meets": "Meets", "good": "Good", "very_good": "Very Good", "exceptional": "Exceptional",
+        "below": "Below", "meets": "Meets", "good": "Good", "exceptional": "Exceptional",
         "view_grid": "Grid",
         "view_full": "Full",
         "all_departments": "All Departments",
@@ -147,7 +147,7 @@ TRANSLATIONS = {
         "no_krs": "Нет KR.",
         "delete_krs": "🗑️ Удалить Ключевые Результаты",
         "performance_level": "Уровень Производительности",
-        "below": "Ниже", "meets": "Соответствует", "good": "Хорошо", "very_good": "Очень хорошо",
+        "below": "Ниже ожидаемого", "meets": "На уровне ожиданий", "good": "Хорошо",
         "exceptional": "Исключительно",
         "view_grid": "Сетка",
         "view_full": "Полный",
@@ -234,7 +234,7 @@ TRANSLATIONS = {
         "no_krs": "KR йўқ.",
         "delete_krs": "🗑️ Калит Натижаларни Ўчириш",
         "performance_level": "Самарадорлик Даражаси",
-        "below": "Ёмон", "meets": "Кутилган", "good": "Яхши", "very_good": "Жуда яхши", "exceptional": "Фантастик",
+        "below": "Ёмон", "meets": "Кутилган", "good": "Яхши", "exceptional": "Фантастик",
         "view_grid": "Тўр",
         "view_full": "Тўлиқ",
         "all_departments": "Барча Департаментлар",
@@ -271,20 +271,19 @@ TRANSLATIONS = {
 }
 
 LEVELS = {
-    "below": {"min": 3.00, "max": 4.24, "color": "#d9534f"},
-    "meets": {"min": 4.25, "max": 4.49, "color": "#f0ad4e"},
-    "good": {"min": 4.50, "max": 4.74, "color": "#5cb85c"},
-    "very_good": {"min": 4.75, "max": 4.99, "color": "#28a745"},
+    "below": {"min": 4.25, "max": 4.49, "color": "#d9534f"},
+    "meets": {"min": 4.50, "max": 4.74, "color": "#f0ad4e"},
+    "good": {"min": 4.75, "max": 4.99, "color": "#5cb85c"},
     "exceptional": {"min": 5.00, "max": 5.00, "color": "#1e7b34"},
 }
 
-# Qualitative grades mapping (A/B/C/D/E to scores)
+# Qualitative grades mapping (A/B/C/D/E to scores) - NEW SCALE (max 5.00)
 QUALITATIVE_GRADES = {
     "A": {"score": 5.00, "level": "exceptional"},
-    "B": {"score": 4.75, "level": "very_good"},
-    "C": {"score": 4.50, "level": "good"},
-    "D": {"score": 4.25, "level": "meets"},
-    "E": {"score": 3.00, "level": "below"},
+    "B": {"score": 4.75, "level": "good"},
+    "C": {"score": 4.50, "level": "meets"},
+    "D": {"score": 4.25, "level": "below"},
+    "E": {"score": 4.25, "level": "below"},
 }
 
 THEME = {
@@ -317,7 +316,9 @@ def get_level_label(level_key: str) -> str:
 
 
 def calculate_score(actual, metric_type: str, thresholds: dict) -> dict:
-    """Calculate score for a KR. Handles quantitative (higher/lower better) and qualitative (A/B/C/D/E) metrics."""
+    """Calculate score for a KR. Handles quantitative (higher/lower better) and qualitative (A/B/C/D/E) metrics.
+    NEW SCALE: 4.25 (Below), 4.50 (Meets), 4.75 (Good), 5.00 (Exceptional) - max is 5.00
+    """
 
     # Handle qualitative metrics (A/B/C/D/E grades)
     if metric_type == "qualitative":
@@ -333,7 +334,7 @@ def calculate_score(actual, metric_type: str, thresholds: dict) -> dict:
         else:
             # Default to E if invalid grade
             return {
-                "score": 3.00,
+                "score": 4.25,
                 "level": "below",
                 "level_info": LEVELS["below"],
                 "grade": "E"
@@ -344,75 +345,66 @@ def calculate_score(actual, metric_type: str, thresholds: dict) -> dict:
     below_th = thresholds['below']
     meets_th = thresholds['meets']
     good_th = thresholds['good']
-    very_good_th = thresholds['very_good']
     exceptional_th = thresholds['exceptional']
 
     if metric_type == "higher_better":
         if actual >= exceptional_th:
             score = 5.00
             level = "exceptional"
-        elif actual >= very_good_th:
-            ratio = (actual - very_good_th) / max((exceptional_th - very_good_th), 1)
-            score = 4.75 + ratio * 0.24
-            level = "very_good"
         elif actual >= good_th:
-            ratio = (actual - good_th) / max((very_good_th - good_th), 1)
-            score = 4.50 + ratio * 0.24
+            ratio = (actual - good_th) / max((exceptional_th - good_th), 1)
+            score = 4.75 + ratio * 0.25
             level = "good"
         elif actual >= meets_th:
             ratio = (actual - meets_th) / max((good_th - meets_th), 1)
-            score = 4.25 + ratio * 0.24
+            score = 4.50 + ratio * 0.25
             level = "meets"
         elif actual >= below_th:
             ratio = (actual - below_th) / max((meets_th - below_th), 1)
-            score = 3.00 + ratio * 1.24
+            score = 4.25 + ratio * 0.25
             level = "below"
         else:
-            score = 3.00
+            score = 4.25
             level = "below"
     else:
         # Lower is better
         if actual <= exceptional_th:
             score = 5.00
             level = "exceptional"
-        elif actual <= very_good_th:
-            ratio = 1 - (actual - exceptional_th) / max((very_good_th - exceptional_th), 1)
-            score = 4.75 + ratio * 0.24
-            level = "very_good"
         elif actual <= good_th:
-            ratio = 1 - (actual - very_good_th) / max((good_th - very_good_th), 1)
-            score = 4.50 + ratio * 0.24
+            ratio = 1 - (actual - exceptional_th) / max((good_th - exceptional_th), 1)
+            score = 4.75 + ratio * 0.25
             level = "good"
         elif actual <= meets_th:
             ratio = 1 - (actual - good_th) / max((meets_th - good_th), 1)
-            score = 4.25 + ratio * 0.24
+            score = 4.50 + ratio * 0.25
             level = "meets"
         elif actual <= below_th:
             ratio = 1 - (actual - meets_th) / max((below_th - meets_th), 1)
-            score = 3.00 + ratio * 1.24
+            score = 4.25 + ratio * 0.25
             level = "below"
         else:
-            score = 3.00
+            score = 4.25
             level = "below"
 
-    return {"score": round(min(max(score, 3.0), 5.0), 2), "level": level, "level_info": LEVELS[level]}
+    return {"score": round(min(max(score, 4.25), 5.00), 2), "level": level, "level_info": LEVELS[level]}
 
 
 def get_level_for_score(score: float) -> dict:
+    """NEW SCALE: 4.25, 4.50, 4.75, 5.00 (max)"""
     if score >= 5.00:
         return {**LEVELS['exceptional'], "key": "exceptional"}
     elif score >= 4.75:
-        return {**LEVELS['very_good'], "key": "very_good"}
-    elif score >= 4.50:
         return {**LEVELS['good'], "key": "good"}
-    elif score >= 4.25:
+    elif score >= 4.50:
         return {**LEVELS['meets'], "key": "meets"}
     else:
         return {**LEVELS['below'], "key": "below"}
 
 
 def score_to_percentage(score: float) -> float:
-    return round(((score - 3.0) / 2.0) * 100, 1)
+    """Convert score to percentage. NEW SCALE: 4.25 = 0%, 5.00 = 100%"""
+    return round(((score - 4.25) / 0.75) * 100, 1)
 
 
 def calculate_weighted_objective_score(objective: dict) -> dict:
@@ -523,7 +515,7 @@ def calculate_weighted_department_score(department: dict) -> dict:
     }
 
 def create_gauge(score: float, compact: bool = False) -> str:
-    """Returns HTML string with ECharts gauge"""
+    """Returns HTML string with ECharts gauge - NEW SCALE: 4.25 to 5.00"""
     import random
     percentage = score_to_percentage(score)
     level_info = get_level_for_score(score)
@@ -539,6 +531,9 @@ def create_gauge(score: float, compact: bool = False) -> str:
     pointer_width = 6 if compact else 10
     axis_width = 15 if compact else 24
 
+    # NEW SCALE: gauge from 4.25 to 5.00
+    # Color stops: 4.25-4.50 (below), 4.50-4.75 (meets), 4.75-5.00 (good), 5.00 (exceptional)
+    # Range is 0.75, so: below=0.33, meets=0.67, good=0.99, exceptional=1.0
     html = f'''
     <div id="{gauge_id}" style="width: 100%; height: {height}px;"></div>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -547,9 +542,9 @@ def create_gauge(score: float, compact: bool = False) -> str:
         var option = {{
             series: [{{
                 type: 'gauge',
-                min: 3,
-                max: 5,
-                splitNumber: 4,
+                min: 4.25,
+                max: 5.0,
+                splitNumber: 3,
                 radius: '90%',
                 center: ['50%', '60%'],
                 startAngle: 180,
@@ -558,10 +553,9 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     lineStyle: {{
                         width: {axis_width},
                         color: [
-                            [0.625, '#d9534f'],
-                            [0.745, '#f0ad4e'],
-                            [0.87, '#5cb85c'],
-                            [0.995, '#28a745'],
+                            [0.333, '#d9534f'],
+                            [0.667, '#f0ad4e'],
+                            [0.99, '#5cb85c'],
                             [1, '#1e7b34']
                         ]
                     }}
@@ -594,7 +588,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     fontSize: {label_size},
                     distance: -35,
                     formatter: function (value) {{
-                        return value.toFixed(1);
+                        return value.toFixed(2);
                     }}
                 }},
                 title: {{
@@ -853,7 +847,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 # Results breakdown table (without weights)
                 st.markdown(f"#### {t('results_breakdown')}")
 
-                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>&lt;4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#28a745; font-size:10px;'>{get_level_label('very_good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
@@ -864,7 +858,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         'below': '' if level != 'below' else 'background:#d9534f; color:white; font-weight:bold;',
                         'meets': '' if level != 'meets' else 'background:#f0ad4e; color:#000; font-weight:bold;',
                         'good': '' if level != 'good' else 'background:#5cb85c; color:white; font-weight:bold;',
-                        'very_good': '' if level != 'very_good' else 'background:#28a745; color:white; font-weight:bold;',
+
                         'exceptional': '' if level != 'exceptional' else 'background:#1e7b34; color:white; font-weight:bold;',
                     }
 
@@ -875,11 +869,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     elif kr['metric_type'] == "higher_better":
                         actual_display = f"{kr['actual']}{kr.get('unit', '')}"
                         th_texts = [f"<{th.get('below', 0)}", f"≥{th.get('meets', 0)}", f"≥{th.get('good', 0)}",
-                                    f"≥{th.get('very_good', 0)}", f"≥{th.get('exceptional', 0)}"]
+                                    f"≥{th.get('exceptional', 0)}"]
                     else:
                         actual_display = f"{kr['actual']}{kr.get('unit', '')}"
                         th_texts = [f">{th.get('below', 0)}", f"≤{th.get('meets', 0)}", f"≤{th.get('good', 0)}",
-                                    f"≤{th.get('very_good', 0)}", f"≤{th.get('exceptional', 0)}"]
+                                    f"≤{th.get('exceptional', 0)}"]
 
                     row_bg = '#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF'
                     kr_desc = kr.get('description', '') or kr['name']
@@ -895,7 +889,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     else:
                         score_display = f"{result['score']:.2f}"
 
-                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#FFF2CC; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['very_good']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[4]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
+                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#FFF2CC; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
 
                 # Weighted Calculation Row - matches Java frontend format
                 if obj_result.get('total_weight', 0) > 0:
@@ -968,28 +962,24 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                         if edit_type != "qualitative":
                             st.markdown("**Thresholds**")
                             th = kr.get('thresholds', {})
-                            et1, et2, et3, et4, et5 = st.columns(5)
+                            et1, et2, et3, et4 = st.columns(4)
                             with et1:
-                                st.markdown(f"<small style='color:#d9534f;'>● 3.00</small>", unsafe_allow_html=True)
+                                st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
                                 edit_below = st.number_input(t("below"), value=th.get('below', 0.0), key=f"edit_below_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                             with et2:
-                                st.markdown(f"<small style='color:#f0ad4e;'>● 4.25</small>", unsafe_allow_html=True)
+                                st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
                                 edit_meets = st.number_input(t("meets"), value=th.get('meets', 60.0), key=f"edit_meets_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                             with et3:
-                                st.markdown(f"<small style='color:#5cb85c;'>● 4.50</small>", unsafe_allow_html=True)
+                                st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
                                 edit_good = st.number_input(t("good"), value=th.get('good', 75.0), key=f"edit_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                             with et4:
-                                st.markdown(f"<small style='color:#28a745;'>● 4.75</small>", unsafe_allow_html=True)
-                                edit_very_good = st.number_input(t("very_good"), value=th.get('very_good', 90.0), key=f"edit_very_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
-                            with et5:
-                                st.markdown(f"<small style='color:#1e7b34;'>● 5.00</small>", unsafe_allow_html=True)
+                                st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
                                 edit_exc = st.number_input(t("exceptional"), value=th.get('exceptional', 100.0), key=f"edit_exc_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
                         else:
                             # For qualitative, set default thresholds (not used but needed for data structure)
                             edit_below = 0.0
                             edit_meets = 60.0
                             edit_good = 75.0
-                            edit_very_good = 90.0
                             edit_exc = 100.0
 
                         if st.button(f"✅ {t('update')} KR{kr_idx + 1}", key=f"update_btn_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"):
@@ -1004,7 +994,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                                         "below": edit_below,
                                         "meets": edit_meets,
                                         "good": edit_good,
-                                        "very_good": edit_very_good,
+
                                         "exceptional": edit_exc
                                     }
                                 })
@@ -1048,22 +1038,18 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 add_description = st.text_area(t("kr_description"), placeholder=t("kr_description_placeholder"),
                                                key=f"add_desc_d{dept_idx}_o{obj_idx}", height=68)
 
-                at1, at2, at3, at4, at5 = st.columns(5)
+                at1, at2, at3, at4 = st.columns(4)
                 with at1:
-                    st.markdown(f"<small style='color:#d9534f;'>● 3.00</small>", unsafe_allow_html=True)
+                    st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
                     add_below = st.number_input(t("below"), value=0.0, key=f"add_below_d{dept_idx}_o{obj_idx}")
                 with at2:
-                    st.markdown(f"<small style='color:#f0ad4e;'>● 4.25</small>", unsafe_allow_html=True)
+                    st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
                     add_meets = st.number_input(t("meets"), value=60.0, key=f"add_meets_d{dept_idx}_o{obj_idx}")
                 with at3:
-                    st.markdown(f"<small style='color:#5cb85c;'>● 4.50</small>", unsafe_allow_html=True)
+                    st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
                     add_good = st.number_input(t("good"), value=75.0, key=f"add_good_d{dept_idx}_o{obj_idx}")
                 with at4:
-                    st.markdown(f"<small style='color:#28a745;'>● 4.75</small>", unsafe_allow_html=True)
-                    add_very_good = st.number_input(t("very_good"), value=90.0,
-                                                    key=f"add_very_good_d{dept_idx}_o{obj_idx}")
-                with at5:
-                    st.markdown(f"<small style='color:#1e7b34;'>● 5.00</small>", unsafe_allow_html=True)
+                    st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
                     add_exc = st.number_input(t("exceptional"), value=100.0, key=f"add_exc_d{dept_idx}_o{obj_idx}")
 
                 if st.button(t("add"), key=f"add_btn_d{dept_idx}_o{obj_idx}"):
@@ -1072,7 +1058,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             "id": str(uuid.uuid4()), "name": add_name.strip(), "metric_type": add_type,
                             "unit": add_unit, "description": add_description.strip(),
                             "thresholds": {"below": add_below, "meets": add_meets, "good": add_good,
-                                           "very_good": add_very_good, "exceptional": add_exc},
+                                           "exceptional": add_exc},
                             "actual": 0.0
                         })
                         save_data()
@@ -1126,14 +1112,14 @@ def load_data():
 
 
 def _create_score_formula(row: int, metric_type: str) -> str:
-    """Create Excel formula for score calculation based on metric type"""
+    """Create Excel formula for score calculation based on metric type - NEW SCALE (max 5.00)"""
     # Column references
     actual_col = 'F'
     type_col = 'E'
     below_col = 'H'
     meets_col = 'I'
     good_col = 'J'
-    very_good_col = 'K'
+    exceptional_col = 'J'
     exceptional_col = 'L'
 
     # Build cell references for this row
@@ -1141,18 +1127,18 @@ def _create_score_formula(row: int, metric_type: str) -> str:
     below = f'{below_col}{row}'
     meets = f'{meets_col}{row}'
     good = f'{good_col}{row}'
-    very_good = f'{very_good_col}{row}'
+    exceptional = f'{exceptional_col}{row}'
     exceptional = f'{exceptional_col}{row}'
     type_cell = f'{type_col}{row}'
 
-    # Qualitative formula (for A/B/C/D/E grades)
-    qualitative_formula = f'''IF({actual}="A",5,IF({actual}="B",4.75,IF({actual}="C",4.5,IF({actual}="D",4.25,3))))'''
+    # Qualitative formula (for A/B/C/D/E grades) - NEW SCALE (max 5.00)
+    qualitative_formula = f'''IF({actual}="A",5,IF({actual}="B",4.75,IF({actual}="C",4.5,IF({actual}="D",4.25,4.25))))'''
 
-    # Higher is better formula
-    higher_better_formula = f'''IF({actual}>={exceptional},5,IF({actual}>={very_good},4.75+({actual}-{very_good})/MAX({exceptional}-{very_good},1)*0.24,IF({actual}>={good},4.5+({actual}-{good})/MAX({very_good}-{good},1)*0.24,IF({actual}>={meets},4.25+({actual}-{meets})/MAX({good}-{meets},1)*0.24,IF({actual}>={below},3+({actual}-{below})/MAX({meets}-{below},1)*1.24,3)))))'''
+    # Higher is better formula - NEW SCALE (max 5.00)
+    higher_better_formula = f'''IF({actual}>={exceptional},5,IF({actual}>={good},4.75+({actual}-{good})/MAX({exceptional}-{good},1)*0.25,IF({actual}>={meets},4.5+({actual}-{meets})/MAX({good}-{meets},1)*0.25,IF({actual}>={below},4.25+({actual}-{below})/MAX({meets}-{below},1)*0.25,4.25))))'''
 
-    # Lower is better formula
-    lower_better_formula = f'''IF({actual}<={exceptional},5,IF({actual}<={very_good},4.75+(1-({actual}-{exceptional})/MAX({very_good}-{exceptional},1))*0.24,IF({actual}<={good},4.5+(1-({actual}-{very_good})/MAX({good}-{very_good},1))*0.24,IF({actual}<={meets},4.25+(1-({actual}-{good})/MAX({meets}-{good},1))*0.24,IF({actual}<={below},3+(1-({actual}-{meets})/MAX({below}-{meets},1))*1.24,3)))))'''
+    # Lower is better formula - NEW SCALE (max 5.00)
+    lower_better_formula = f'''IF({actual}<={exceptional},5,IF({actual}<={good},4.75+(1-({actual}-{exceptional})/MAX({good}-{exceptional},1))*0.25,IF({actual}<={meets},4.5+(1-({actual}-{good})/MAX({meets}-{good},1))*0.25,IF({actual}<={below},4.25+(1-({actual}-{meets})/MAX({below}-{meets},1))*0.25,4.25))))'''
 
     # Main formula that checks metric type
     if metric_type == 'qualitative':
@@ -1164,17 +1150,17 @@ def _create_score_formula(row: int, metric_type: str) -> str:
 
 
 def _create_performance_level_formula(row: int) -> str:
-    """Create Excel formula for performance level categorization"""
+    """Create Excel formula for performance level categorization - NEW SCALE (max 5.00)"""
     score_cell = f'M{row}'
 
-    # Formula to categorize score into performance levels
-    formula = f'''IF({score_cell}>=5,"Exceptional",IF({score_cell}>=4.75,"Very Good",IF({score_cell}>=4.5,"Good",IF({score_cell}>=4.25,"Meets","Below"))))'''
+    # Formula to categorize score into performance levels - NEW SCALE (max 5.00)
+    formula = f'''IF({score_cell}>=5,"Exceptional",IF({score_cell}>=4.75,"Good",IF({score_cell}>=4.5,"Meets","Below")))'''
 
     return f'={formula}'
 
 
 def _apply_conditional_formatting(ws, max_row: int, colors: dict):
-    """Apply conditional formatting to score and performance level columns based on score values"""
+    """Apply conditional formatting to score and performance level columns based on score values - NEW SCALE (max 5.00)"""
     from openpyxl.formatting.rule import Rule
     from openpyxl.styles.differential import DifferentialStyle
 
@@ -1182,14 +1168,11 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict):
     below_fill = PatternFill(start_color=colors['below'], end_color=colors['below'], fill_type='solid')
     meets_fill = PatternFill(start_color=colors['meets'], end_color=colors['meets'], fill_type='solid')
     good_fill = PatternFill(start_color=colors['good'], end_color=colors['good'], fill_type='solid')
-    very_good_fill = PatternFill(start_color=colors['very_good'], end_color=colors['very_good'], fill_type='solid')
     exceptional_fill = PatternFill(start_color=colors['exceptional'], end_color=colors['exceptional'], fill_type='solid')
 
     white_font = Font(bold=True, color='FFFFFF')
 
-    # Apply conditional formatting to Score column (M)
-    # Excel evaluates rules in priority order (1 is highest priority)
-    # Add rules from highest priority (exceptional) to lowest (below)
+    # Apply conditional formatting to Score column (M) - NEW SCALE (max 5.00)
     score_range = f'M2:M{max_row-1}'
 
     # Exceptional: >= 5.00 (priority 1 - check first)
@@ -1199,35 +1182,28 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict):
     rule1.priority = 1
     ws.conditional_formatting.add(score_range, rule1)
 
-    # Very Good: 4.75 <= x < 5.00 (priority 2)
+    # Good: 4.75 <= x < 5.00 (priority 2)
     rule2 = Rule(type='cellIs', operator='between', formula=['4.75', '4.99'],
                  stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=very_good_fill, font=white_font))
+                 dxf=DifferentialStyle(fill=good_fill, font=white_font))
     rule2.priority = 2
     ws.conditional_formatting.add(score_range, rule2)
 
-    # Good: 4.50 <= x < 4.75 (priority 3)
+    # Meets: 4.50 <= x < 4.75 (priority 3)
     rule3 = Rule(type='cellIs', operator='between', formula=['4.50', '4.74'],
                  stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=good_fill, font=white_font))
+                 dxf=DifferentialStyle(fill=meets_fill, font=white_font))
     rule3.priority = 3
     ws.conditional_formatting.add(score_range, rule3)
 
-    # Meets: 4.25 <= x < 4.50 (priority 4)
-    rule4 = Rule(type='cellIs', operator='between', formula=['4.25', '4.49'],
+    # Below: < 4.50 (priority 4 - check last)
+    rule4 = Rule(type='cellIs', operator='lessThan', formula=['4.50'],
                  stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=meets_fill, font=white_font))
+                 dxf=DifferentialStyle(fill=below_fill, font=white_font))
     rule4.priority = 4
     ws.conditional_formatting.add(score_range, rule4)
 
-    # Below: < 4.25 (priority 5 - check last)
-    rule5 = Rule(type='cellIs', operator='lessThan', formula=['4.25'],
-                 stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=below_fill, font=white_font))
-    rule5.priority = 5
-    ws.conditional_formatting.add(score_range, rule5)
-
-    # Apply conditional formatting to Performance Level column (N) based on Score column
+    # Apply conditional formatting to Performance Level column (N) based on Score column - NEW SCALE (max 5.00)
     level_range = f'N2:N{max_row-1}'
 
     # Exceptional: when score >= 5.00 (priority 1)
@@ -1237,33 +1213,26 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict):
     lrule1.priority = 1
     ws.conditional_formatting.add(level_range, lrule1)
 
-    # Very Good: when 4.75 <= score < 5.00 (priority 2)
+    # Good: when 4.75 <= score < 5.00 (priority 2)
     lrule2 = Rule(type='expression', formula=[f'AND($M2>=4.75,$M2<5.00)'],
                   stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=very_good_fill, font=white_font))
+                  dxf=DifferentialStyle(fill=good_fill, font=white_font))
     lrule2.priority = 2
     ws.conditional_formatting.add(level_range, lrule2)
 
-    # Good: when 4.50 <= score < 4.75 (priority 3)
+    # Meets: when 4.50 <= score < 4.75 (priority 3)
     lrule3 = Rule(type='expression', formula=[f'AND($M2>=4.50,$M2<4.75)'],
                   stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=good_fill, font=white_font))
+                  dxf=DifferentialStyle(fill=meets_fill, font=white_font))
     lrule3.priority = 3
     ws.conditional_formatting.add(level_range, lrule3)
 
-    # Meets: when 4.25 <= score < 4.50 (priority 4)
-    lrule4 = Rule(type='expression', formula=[f'AND($M2>=4.25,$M2<4.50)'],
-                  stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=meets_fill, font=white_font))
-    lrule4.priority = 4
-    ws.conditional_formatting.add(level_range, lrule4)
-
-    # Below: when score < 4.25 (priority 5)
-    lrule5 = Rule(type='expression', formula=[f'$M2<4.25'],
+    # Below: when score < 4.50 (priority 4)
+    lrule4 = Rule(type='expression', formula=[f'$M2<4.50'],
                   stopIfTrue=True,
                   dxf=DifferentialStyle(fill=below_fill, font=white_font))
-    lrule5.priority = 5
-    ws.conditional_formatting.add(level_range, lrule5)
+    lrule4.priority = 4
+    ws.conditional_formatting.add(level_range, lrule4)
 
 
 def export_to_excel(departments):
@@ -1277,7 +1246,7 @@ def export_to_excel(departments):
         'below': 'd9534f',
         'meets': 'f0ad4e',
         'good': '5cb85c',
-        'very_good': '28a745',
+
         'exceptional': '1e7b34'
     }
 
@@ -1290,7 +1259,7 @@ def export_to_excel(departments):
     # Add headers (without KR weight)
     headers = [t('department'), t('objective'), t('objective_weight'), t('key_result'),
                t('type'), t('actual'), t('unit'), t('below'), t('meets'), t('good'),
-               t('very_good'), t('exceptional'), t('score').replace('🎯 ', ''), t('performance_level')]
+               t('exceptional'), t('score').replace('🎯 ', ''), t('performance_level')]
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
@@ -1347,8 +1316,7 @@ def export_to_excel(departments):
                     ws.cell(row=row_idx, column=8, value=th.get('below', 0))
                     ws.cell(row=row_idx, column=9, value=th.get('meets', 0))
                     ws.cell(row=row_idx, column=10, value=th.get('good', 0))
-                    ws.cell(row=row_idx, column=11, value=th.get('very_good', 0))
-                    ws.cell(row=row_idx, column=12, value=th.get('exceptional', 0))
+                    ws.cell(row=row_idx, column=11, value=th.get('exceptional', 0))
 
                 # Create Excel formula for score calculation
                 score_formula = _create_score_formula(row_idx, kr['metric_type'])
@@ -1785,8 +1753,8 @@ def main():
             <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'> {t('performance_scale')}</p>
         """, unsafe_allow_html=True)
 
-        cols = st.columns(5)
-        for i, key in enumerate(["below", "meets", "good", "very_good", "exceptional"]):
+        cols = st.columns(4)
+        for i, key in enumerate(["below", "meets", "good", "exceptional"]):
             level = LEVELS[key]
             with cols[i]:
                 pct_range = f"{score_to_percentage(level['min'])}%-{score_to_percentage(level['max'])}%"
@@ -1858,25 +1826,22 @@ def main():
                 # Show thresholds only for quantitative metrics
                 if kr_type != "qualitative":
                     st.markdown(f"**{t('thresholds')}:**")
-                    t1, t2, t3, t4, t5 = st.columns(5)
+                    t1, t2, t3, t4 = st.columns(4)
                     with t1:
-                        st.markdown(f"<small style='color:#d9534f;'>● 3.00</small>", unsafe_allow_html=True)
+                        st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
                         th_below = st.number_input(t("below"), value=0.0, key="th_below")
                     with t2:
-                        st.markdown(f"<small style='color:#f0ad4e;'>● 4.25</small>", unsafe_allow_html=True)
+                        st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
                         th_meets = st.number_input(t("meets"), value=60.0, key="th_meets")
                     with t3:
-                        st.markdown(f"<small style='color:#5cb85c;'>● 4.50</small>", unsafe_allow_html=True)
+                        st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
                         th_good = st.number_input(t("good"), value=75.0, key="th_good")
                     with t4:
-                        st.markdown(f"<small style='color:#28a745;'>● 4.75</small>", unsafe_allow_html=True)
-                        th_very_good = st.number_input(t("very_good"), value=90.0, key="th_very_good")
-                    with t5:
-                        st.markdown(f"<small style='color:#1e7b34;'>● 5.00</small>", unsafe_allow_html=True)
+                        st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
                         th_exceptional = st.number_input(t("exceptional"), value=100.0, key="th_exceptional")
                 else:
                     st.info(
-                        " Qualitative KRs use A/B/C/D/E grades: A=5.0 (Exceptional), B=4.75 (Very Good), C=4.50 (Good), D=4.25 (Meets), E=3.0 (Below)")
+                        " Qualitative KRs use A/B/C/D/E grades: A=5.00 (Exceptional), B=4.75 (Good), C=4.50 (Meets), D=4.25 (Below), E=4.25 (Below)")
                     th_below, th_meets, th_good, th_very_good, th_exceptional = 0, 0, 0, 0, 0
 
                 if st.button(t("add_kr")):
@@ -2015,18 +1980,16 @@ def main():
                                  "name": "KR1.1 Проекты завершенные в срок (% от кол-ва проектов)",
                                  "metric_type": "higher_better", "unit": "%", "weight": 40,
                                  "description": "Процент проектов, которые были завершены в установленные сроки. Измеряется как отношение количества проектов, завершенных вовремя, к общему количеству проектов.",
-                                 "thresholds": {"below": 50, "meets": 60, "good": 80, "very_good": 100,
-                                                "exceptional": 120}, "actual": 0},
+                                 "thresholds": {"below": 50, "meets": 60, "good": 80, "exceptional": 120}, "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR1.2 Задачи в JIRA, завершенные в срок (%)",
                                  "metric_type": "higher_better", "unit": "%", "weight": 35,
                                  "description": "Процент задач в системе JIRA, выполненных в установленные сроки без переносов дедлайнов.",
-                                 "thresholds": {"below": 50, "meets": 65, "good": 95, "very_good": 100,
-                                                "exceptional": 200}, "actual": 0},
+                                 "thresholds": {"below": 50, "meets": 65, "good": 95, "exceptional": 200}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR1.3 Переносы сроков заверш задач в JIRA (% от общего кол-ва)",
                                  "metric_type": "lower_better", "unit": "%", "weight": 25,
                                  "description": "Процент задач, у которых были перенесены сроки выполнения. Чем меньше значение, тем лучше.",
-                                 "thresholds": {"below": 30, "meets": 20, "good": 15, "very_good": 5, "exceptional": 0},
+                                 "thresholds": {"below": 30, "meets": 20, "good": 15, "exceptional": 0},
                                  "actual": 0},
                             ]
                         },
@@ -2038,21 +2001,18 @@ def main():
                             "key_results": [
                                 {"id": str(uuid.uuid4()), "name": "KR2.1 Проекты в рамках бюджетов (% без превышения)",
                                  "metric_type": "higher_better", "unit": "%", "weight": 30,
-                                 "thresholds": {"below": 50, "meets": 60, "good": 75, "very_good": 90,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 50, "meets": 60, "good": 75, "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR2.2 Неучтенные риски возникшие после начала проекта (кол-во)",
                                  "metric_type": "lower_better", "unit": "", "weight": 25,
-                                 "thresholds": {"below": 10, "meets": 5, "good": 2, "very_good": 1, "exceptional": 0},
+                                 "thresholds": {"below": 10, "meets": 5, "good": 2, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR2.3 Повысить точность оценки трудозатрат до 75%",
                                  "metric_type": "higher_better", "unit": "%", "weight": 25,
-                                 "thresholds": {"below": 50, "meets": 75, "good": 80, "very_good": 85,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 50, "meets": 75, "good": 80, "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR2.4 Процент рисков с планами митигации (%)",
                                  "metric_type": "higher_better", "unit": "%", "weight": 20,
-                                 "thresholds": {"below": 20, "meets": 50, "good": 60, "very_good": 80,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 20, "meets": 50, "good": 60, "exceptional": 100}, "actual": 0},
                             ]
                         },
                         # Цель 3: Управление качеством и отчетность (20%)
@@ -2064,22 +2024,21 @@ def main():
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.1 Своевременность отчетов W,Q,Y, другие (задержка, дней)",
                                  "metric_type": "lower_better", "unit": " дней", "weight": 25,
-                                 "thresholds": {"below": 5, "meets": 3, "good": 2, "very_good": 1, "exceptional": 0},
+                                 "thresholds": {"below": 5, "meets": 3, "good": 2, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.2 Уровень использования ресурсов (resource utilization) %",
                                  "metric_type": "higher_better", "unit": "%", "weight": 25,
-                                 "thresholds": {"below": 75, "meets": 85, "good": 90, "very_good": 95,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 75, "meets": 85, "good": 90, "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.3 Реагирование на изменения (Response time to changes) часы",
                                  "metric_type": "lower_better", "unit": " часов", "weight": 25,
-                                 "thresholds": {"below": 5, "meets": 3, "good": 2, "very_good": 1, "exceptional": 0},
+                                 "thresholds": {"below": 5, "meets": 3, "good": 2, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR3.4 Среднее время от инициации до завершения проекта (нед)",
                                  "metric_type": "lower_better", "unit": " нед", "weight": 25,
-                                 "thresholds": {"below": 10, "meets": 8, "good": 6, "very_good": 5, "exceptional": 4},
+                                 "thresholds": {"below": 10, "meets": 8, "good": 6, "exceptional": 4},
                                  "actual": 0},
                             ]
                         },
@@ -2092,16 +2051,16 @@ def main():
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR4.1 Комплектация штата (6 свободных вакансий в штате)",
                                  "metric_type": "higher_better", "unit": "", "weight": 35,
-                                 "thresholds": {"below": 2, "meets": 3, "good": 4, "very_good": 5, "exceptional": 6},
+                                 "thresholds": {"below": 2, "meets": 3, "good": 4, "exceptional": 6},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR4.2 Набор и подготовка стажеров (16 вакансий)",
                                  "metric_type": "higher_better", "unit": "", "weight": 35,
-                                 "thresholds": {"below": 3, "meets": 6, "good": 10, "very_good": 12, "exceptional": 16},
+                                 "thresholds": {"below": 3, "meets": 6, "good": 10, "exceptional": 16},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()), "name": "KR4.3 Качество развития сотрудников (оценка)",
                                  "metric_type": "qualitative", "unit": "", "weight": 30,
                                  "description": "Качественная оценка программы развития сотрудников. A=Отлично, B=Очень хорошо, C=Хорошо, D=Удовлетворительно, E=Неудовлетворительно",
-                                 "thresholds": {"below": 0, "meets": 0, "good": 0, "very_good": 0, "exceptional": 0},
+                                 "thresholds": {"below": 0, "meets": 0, "good": 0, "exceptional": 0},
                                  "actual": "C"},
                             ]
                         },
@@ -2114,22 +2073,20 @@ def main():
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.1 Увеличить долю проектов, связанных со стратегическими целями Банка, до 85%",
                                  "metric_type": "higher_better", "unit": "%", "weight": 30,
-                                 "thresholds": {"below": 75, "meets": 85, "good": 90, "very_good": 95,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 75, "meets": 85, "good": 90, "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.2 % продуктов с повторными багами (Defect/error rate)",
                                  "metric_type": "lower_better", "unit": "%", "weight": 30,
-                                 "thresholds": {"below": 20, "meets": 15, "good": 10, "very_good": 5, "exceptional": 0},
+                                 "thresholds": {"below": 20, "meets": 15, "good": 10, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.3 Обеспечить участие 100% членов команды в обучении по Agile/Scrum",
                                  "metric_type": "higher_better", "unit": "%", "weight": 20,
-                                 "thresholds": {"below": 80, "meets": 90, "good": 95, "very_good": 100,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 80, "meets": 90, "good": 95, "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR5.4 Провести 6 внутренних воркшопов по методологиям и новым технологиям",
                                  "metric_type": "higher_better", "unit": "", "weight": 20,
-                                 "thresholds": {"below": 4, "meets": 6, "good": 7, "very_good": 8, "exceptional": 9},
+                                 "thresholds": {"below": 4, "meets": 6, "good": 7, "exceptional": 9},
                                  "actual": 0},
                             ]
                         },
@@ -2142,17 +2099,16 @@ def main():
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR6.1 Уровень автоматизации процессов проектного управления",
                                  "metric_type": "higher_better", "unit": "%", "weight": 40,
-                                 "thresholds": {"below": 75, "meets": 85, "good": 90, "very_good": 95,
-                                                "exceptional": 100}, "actual": 0},
+                                 "thresholds": {"below": 75, "meets": 85, "good": 90, "exceptional": 100}, "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR6.2 Качество описание бизнес процессов (изменение BPMN) %",
                                  "metric_type": "lower_better", "unit": "%", "weight": 30,
-                                 "thresholds": {"below": 20, "meets": 15, "good": 10, "very_good": 5, "exceptional": 0},
+                                 "thresholds": {"below": 20, "meets": 15, "good": 10, "exceptional": 0},
                                  "actual": 0},
                                 {"id": str(uuid.uuid4()),
                                  "name": "KR6.3 Процент изменений плана проекта после планирования",
                                  "metric_type": "lower_better", "unit": "%", "weight": 30,
-                                 "thresholds": {"below": 20, "meets": 15, "good": 10, "very_good": 5, "exceptional": 0},
+                                 "thresholds": {"below": 20, "meets": 15, "good": 10, "exceptional": 0},
                                  "actual": 0},
                             ]
                         },

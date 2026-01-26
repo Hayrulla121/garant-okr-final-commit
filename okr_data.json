@@ -17,29 +17,28 @@
               "weight": 40.0,
               "description": "Процент проектов, которые были завершены в установленные сроки. Измеряется как отношение количества проектов, завершенных вовремя, к общему количеству проектов.",
               "thresholds": {
-                "below": 30,
-                "meets": 40,
+                "below": 20,
+                "meets": 50,
                 "good": 80,
-                "very_good": 100,
                 "exceptional": 120
               },
-              "actual": 110
+              "actual": 50
             },
             {
               "id": "fc2b1da4-f0f9-439b-a31d-79410afb8d97",
               "name": "KR1.2 Задачи в JIRA, завершенные в срок (%)",
               "metric_type": "higher_better",
               "unit": "%",
-              "weight": 35,
+              "weight": 35.0,
               "description": "Процент задач в системе JIRA, выполненных в установленные сроки без переносов дедлайнов.",
               "thresholds": {
-                "below": 50,
+                "below": 40,
                 "meets": 65,
                 "good": 95,
                 "very_good": 100,
                 "exceptional": 200
               },
-              "actual": 96
+              "actual": 50
             },
             {
               "id": "3b046434-bb69-43e5-9825-5ffef089eafb",
@@ -366,50 +365,7 @@
           ]
         }
       ]
-    },
-    {
-      "id": "1857cf73-d2c4-4c32-b8df-9b8cc9c67a76",
-      "name": "IT",
-      "objectives": [
-        {
-          "id": "f838d66e-e100-43c9-92ac-7368f07c873b",
-          "name": "Frontend",
-          "weight": 0,
-          "key_results": [
-            {
-              "id": "dcbfc893-f40c-4863-bd32-7d12b7613116",
-              "name": "UI UX",
-              "metric_type": "higher_better",
-              "unit": "%",
-              "description": "",
-              "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
-              },
-              "actual": 70.0
-            },
-            {
-              "id": "eec32231-148d-4a38-a853-641d195380db",
-              "name": "Task in time",
-              "metric_type": "higher_better",
-              "unit": "%",
-              "description": "",
-              "thresholds": {
-                "below": 0.0,
-                "meets": 60.0,
-                "good": 75.0,
-                "very_good": 90.0,
-                "exceptional": 100.0
-              },
-              "actual": 60.0
-            }
-          ]
-        }
-      ]
     }
   ],
-  "language": "ru"
+  "language": "en"
 }
