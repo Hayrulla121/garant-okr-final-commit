@@ -39,7 +39,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 100.0
+              "actual": 70.0
             },
             {
               "id": "c6d8daba-9ab8-4e86-9295-8f12e7dc9b7b",
@@ -130,7 +130,8 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
               "actual": 0.0
             },
@@ -145,7 +146,8 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
               "actual": 0.0
             },
@@ -160,7 +162,8 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
               "actual": 80.0
             }
@@ -222,7 +225,7 @@
         "key": "level_1",
         "order": 4,
         "threshold": 0.98,
-        "color": "#00b500",
+        "color": "#08ad00",
         "names": {
           "en": "исключительно",
           "ru": "Новый уровень",

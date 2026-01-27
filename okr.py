@@ -2194,6 +2194,20 @@ def score_levels_settings_dialog():
             # Validate
             is_valid, error_msg = validate_score_levels_config(new_config)
             if is_valid:
+                # Get valid level keys from new config
+                valid_level_keys = {lvl['key'] for lvl in new_config['levels']}
+
+                # Clean up KR thresholds - remove keys for deleted levels
+                for dept in st.session_state.departments:
+                    for obj in dept.get('objectives', []):
+                        for kr in obj.get('key_results', []):
+                            if 'thresholds' in kr:
+                                # Remove threshold keys that no longer exist in config
+                                kr['thresholds'] = {
+                                    k: v for k, v in kr['thresholds'].items()
+                                    if k in valid_level_keys
+                                }
+
                 st.session_state.score_levels_config = new_config
                 st.session_state.dialog_levels_config = None  # Clear dialog state
                 save_data()
