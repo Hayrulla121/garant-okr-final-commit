@@ -27,7 +27,7 @@
                 "good": 75.0,
                 "exceptional": 100.0
               },
-              "actual": 0.0
+              "actual": 90.0
             },
             {
               "id": "46269c5e-7399-497c-a58a-3969bd63b4b4",
@@ -168,5 +168,73 @@
       ]
     }
   ],
-  "language": "ru"
+  "language": "en",
+  "score_levels_config": {
+    "min_score": 0.0,
+    "max_score": 1.0,
+    "levels": [
+      {
+        "key": "below",
+        "order": 0,
+        "threshold": 0.0,
+        "color": "#d9534f",
+        "names": {
+          "en": "не соотвтветствует",
+          "ru": "Ниже ожидаемого",
+          "uz": "Ёмон"
+        }
+      },
+      {
+        "key": "meets",
+        "order": 1,
+        "threshold": 0.31,
+        "color": "#f0ad4e",
+        "names": {
+          "en": "ниже ожиданий",
+          "ru": "На уровне ожиданий",
+          "uz": "Кутилган"
+        }
+      },
+      {
+        "key": "good",
+        "order": 2,
+        "threshold": 0.51,
+        "color": "#5cb85c",
+        "names": {
+          "en": "на уровне ожиданий",
+          "ru": "Хорошо",
+          "uz": "Яхши"
+        }
+      },
+      {
+        "key": "exceptional",
+        "order": 3,
+        "threshold": 0.86,
+        "color": "#89d89c",
+        "names": {
+          "en": "превышает ожидания",
+          "ru": "Исключительно",
+          "uz": "Фантастик"
+        }
+      },
+      {
+        "key": "level_1",
+        "order": 4,
+        "threshold": 0.98,
+        "color": "#00b500",
+        "names": {
+          "en": "исключительно",
+          "ru": "Новый уровень",
+          "uz": "Yangi daraja"
+        }
+      }
+    ],
+    "qualitative_mapping": {
+      "A": "exceptional",
+      "B": "good",
+      "C": "meets",
+      "D": "below",
+      "E": "below"
+    }
+  }
 }

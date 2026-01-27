@@ -95,6 +95,23 @@ TRANSLATIONS = {
         "edit_krs": "✏️ Edit Key Results",
         "edit_objective": "✏️ Edit Objective",
         "update": "Update",
+        "score_level_settings": "Score Level Settings",
+        "configure_score_levels": "Configure Score Levels",
+        "score_range": "Score Range",
+        "min_score": "Min Score",
+        "max_score": "Max Score",
+        "performance_levels": "Performance Levels",
+        "add_level": "Add Level",
+        "delete_level": "Delete Level",
+        "level_name": "Level Name",
+        "level_threshold": "Threshold",
+        "level_color": "Color",
+        "grade_mapping": "Qualitative Grade Mapping",
+        "save_settings": "Save Settings",
+        "settings_saved": "Settings saved!",
+        "invalid_config": "Invalid configuration",
+        "reset_defaults": "Reset to Defaults",
+        "cancel": "Cancel",
     },
     "ru": {
         "title": "OKR Трекер",
@@ -183,6 +200,23 @@ TRANSLATIONS = {
         "edit_krs": "✏️ Редактировать Ключевые Результаты",
         "edit_objective": "✏️ Редактировать Цель",
         "update": "Обновить",
+        "score_level_settings": "Настройки уровней оценки",
+        "configure_score_levels": "Настроить уровни оценки",
+        "score_range": "Диапазон оценок",
+        "min_score": "Мин. оценка",
+        "max_score": "Макс. оценка",
+        "performance_levels": "Уровни производительности",
+        "add_level": "Добавить уровень",
+        "delete_level": "Удалить уровень",
+        "level_name": "Название уровня",
+        "level_threshold": "Порог",
+        "level_color": "Цвет",
+        "grade_mapping": "Сопоставление оценок",
+        "save_settings": "Сохранить настройки",
+        "settings_saved": "Настройки сохранены!",
+        "invalid_config": "Неверная конфигурация",
+        "reset_defaults": "Сбросить по умолчанию",
+        "cancel": "Отмена",
     },
     "uz": {
         "title": "OKR Трекер",
@@ -270,6 +304,23 @@ TRANSLATIONS = {
         "edit_krs": "✏️ Калит Натижаларни Таҳрирлаш",
         "edit_objective": "✏️ Мақсадни Таҳрирлаш",
         "update": "Янгилаш",
+        "score_level_settings": "Баҳо даражаси созламалари",
+        "configure_score_levels": "Баҳо даражаларини созлаш",
+        "score_range": "Баҳо оралиғи",
+        "min_score": "Мин. баҳо",
+        "max_score": "Макс. баҳо",
+        "performance_levels": "Самарадорлик даражалари",
+        "add_level": "Дарага қўшиш",
+        "delete_level": "Даражани ўчириш",
+        "level_name": "Дарага номи",
+        "level_threshold": "Чегара",
+        "level_color": "Ранг",
+        "grade_mapping": "Баҳо хариталаш",
+        "save_settings": "Созламаларни сақлаш",
+        "settings_saved": "Созламалар сақланди!",
+        "invalid_config": "Нотўғри конфигурация",
+        "reset_defaults": "Стандартга қайтариш",
+        "cancel": "Бекор қилиш",
     }
 }
 
@@ -281,12 +332,56 @@ LEVELS = {
 }
 
 # Qualitative grades mapping (A/B/C/D/E to scores) - NEW SCALE (max 5.00)
+# NOTE: These are kept for backward compatibility but dynamic config is preferred
 QUALITATIVE_GRADES = {
     "A": {"score": 5.00, "level": "exceptional"},
     "B": {"score": 4.75, "level": "good"},
     "C": {"score": 4.50, "level": "meets"},
     "D": {"score": 4.25, "level": "below"},
     "E": {"score": 4.25, "level": "below"},
+}
+
+# Default configuration for dynamic score levels
+DEFAULT_SCORE_LEVELS_CONFIG = {
+    "min_score": 4.25,
+    "max_score": 5.00,
+    "levels": [
+        {
+            "key": "below",
+            "order": 0,
+            "threshold": 4.25,
+            "color": "#d9534f",
+            "names": {"en": "Below", "ru": "Ниже ожидаемого", "uz": "Ёмон"}
+        },
+        {
+            "key": "meets",
+            "order": 1,
+            "threshold": 4.50,
+            "color": "#f0ad4e",
+            "names": {"en": "Meets", "ru": "На уровне ожиданий", "uz": "Кутилган"}
+        },
+        {
+            "key": "good",
+            "order": 2,
+            "threshold": 4.75,
+            "color": "#5cb85c",
+            "names": {"en": "Good", "ru": "Хорошо", "uz": "Яхши"}
+        },
+        {
+            "key": "exceptional",
+            "order": 3,
+            "threshold": 5.00,
+            "color": "#1e7b34",
+            "names": {"en": "Exceptional", "ru": "Исключительно", "uz": "Фантастик"}
+        }
+    ],
+    "qualitative_mapping": {
+        "A": "exceptional",
+        "B": "good",
+        "C": "meets",
+        "D": "below",
+        "E": "below"
+    }
 }
 
 THEME = {
@@ -314,100 +409,235 @@ def t(key: str) -> str:
     return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
 
 
+# ===== DYNAMIC SCORE LEVEL CONFIGURATION HELPERS =====
+
+def get_score_levels_config() -> dict:
+    """Get score levels configuration from session state or return default."""
+    return st.session_state.get('score_levels_config', DEFAULT_SCORE_LEVELS_CONFIG)
+
+
+def get_levels_dict() -> dict:
+    """Build a LEVELS-compatible dict from dynamic config for backward compatibility."""
+    config = get_score_levels_config()
+    levels = sorted(config['levels'], key=lambda x: x['order'])
+    result = {}
+
+    for i, level in enumerate(levels):
+        # Calculate max as threshold of next level minus 0.01, or same as threshold for last level
+        if i < len(levels) - 1:
+            max_val = round(levels[i + 1]['threshold'] - 0.01, 2)
+        else:
+            max_val = level['threshold']
+
+        result[level['key']] = {
+            "min": level['threshold'],
+            "max": max_val,
+            "color": level['color']
+        }
+    return result
+
+
+def get_qualitative_grades_dict() -> dict:
+    """Build a QUALITATIVE_GRADES-compatible dict from dynamic config."""
+    config = get_score_levels_config()
+    levels_by_key = {lvl['key']: lvl for lvl in config['levels']}
+    result = {}
+
+    for grade, level_key in config.get('qualitative_mapping', {}).items():
+        level = levels_by_key.get(level_key)
+        if level:
+            result[grade] = {
+                "score": level['threshold'],
+                "level": level_key
+            }
+        else:
+            # Fallback to lowest level
+            lowest = sorted(config['levels'], key=lambda x: x['threshold'])[0]
+            result[grade] = {
+                "score": lowest['threshold'],
+                "level": lowest['key']
+            }
+    return result
+
+
+def get_level_name(level_key: str, lang: str = None) -> str:
+    """Get translated level name from dynamic config."""
+    if lang is None:
+        lang = st.session_state.get('language', 'en')
+
+    config = get_score_levels_config()
+    for level in config['levels']:
+        if level['key'] == level_key:
+            return level['names'].get(lang, level['names'].get('en', level_key))
+    return level_key
+
+
+def validate_score_levels_config(config: dict) -> tuple:
+    """Validate score levels configuration. Returns (is_valid, error_message)."""
+    # Check minimum 2 levels
+    if len(config.get('levels', [])) < 2:
+        return False, "At least 2 levels are required"
+
+    # Check unique thresholds
+    thresholds = [lvl['threshold'] for lvl in config['levels']]
+    if len(thresholds) != len(set(thresholds)):
+        return False, "Thresholds must be unique"
+
+    # Check non-empty names
+    for lvl in config['levels']:
+        if not lvl.get('names', {}).get('en', '').strip():
+            return False, f"Level '{lvl['key']}' must have an English name"
+
+    # Check min < max score
+    if config['min_score'] >= config['max_score']:
+        return False, "Min score must be less than max score"
+
+    # Check all thresholds within range
+    for lvl in config['levels']:
+        if not (config['min_score'] <= lvl['threshold'] <= config['max_score']):
+            return False, f"Threshold {lvl['threshold']} is outside score range"
+
+    # Check qualitative mapping references valid levels
+    level_keys = {lvl['key'] for lvl in config['levels']}
+    for grade, level_key in config.get('qualitative_mapping', {}).items():
+        if level_key not in level_keys:
+            return False, f"Grade {grade} maps to unknown level '{level_key}'"
+
+    return True, ""
+
+
 def get_level_label(level_key: str) -> str:
-    return t(level_key)
+    """Get translated label for a level key using dynamic config."""
+    return get_level_name(level_key)
 
 
 def calculate_score(actual, metric_type: str, thresholds: dict) -> dict:
     """Calculate score for a KR. Handles quantitative (higher/lower better) and qualitative (A/B/C/D/E) metrics.
-    NEW SCALE: 4.25 (Below), 4.50 (Meets), 4.75 (Good), 5.00 (Exceptional) - max is 5.00
+    Uses dynamic score levels configuration.
     """
+    config = get_score_levels_config()
+    levels_dict = get_levels_dict()
+    min_score = config['min_score']
+    max_score = config['max_score']
+    sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'])
 
     # Handle qualitative metrics (A/B/C/D/E grades)
     if metric_type == "qualitative":
+        qual_grades = get_qualitative_grades_dict()
         grade = str(actual).upper() if actual else "E"
-        if grade in QUALITATIVE_GRADES:
-            grade_info = QUALITATIVE_GRADES[grade]
+        if grade in qual_grades:
+            grade_info = qual_grades[grade]
             return {
                 "score": grade_info["score"],
                 "level": grade_info["level"],
-                "level_info": LEVELS[grade_info["level"]],
+                "level_info": levels_dict[grade_info["level"]],
                 "grade": grade
             }
         else:
-            # Default to E if invalid grade
+            # Default to lowest level if invalid grade
+            lowest = sorted_levels[0]
             return {
-                "score": 4.25,
-                "level": "below",
-                "level_info": LEVELS["below"],
+                "score": lowest['threshold'],
+                "level": lowest['key'],
+                "level_info": levels_dict[lowest['key']],
                 "grade": "E"
             }
 
     # Handle quantitative metrics
     actual = float(actual) if actual else 0.0
-    below_th = thresholds['below']
-    meets_th = thresholds['meets']
-    good_th = thresholds['good']
-    exceptional_th = thresholds['exceptional']
+
+    # Only use levels that exist in the KR thresholds data
+    # Filter out levels that don't have corresponding KR thresholds
+    valid_levels = []
+    for lvl in sorted_levels:
+        if lvl['key'] in thresholds:
+            valid_levels.append(lvl)
+
+    # If no valid levels found, use the base 4 levels (below, meets, good, exceptional)
+    if not valid_levels:
+        base_keys = ['below', 'meets', 'good', 'exceptional']
+        valid_levels = [lvl for lvl in sorted_levels if lvl['key'] in base_keys]
+
+    # Still no valid levels? Use all sorted levels as fallback
+    if not valid_levels:
+        valid_levels = sorted_levels
+
+    level_keys = [lvl['key'] for lvl in valid_levels]
+    kr_thresholds = [thresholds.get(key, 0) for key in level_keys]
+    level_scores = [lvl['threshold'] for lvl in valid_levels]
+
+    score = min_score
+    level_key = valid_levels[0]['key']
 
     if metric_type == "higher_better":
-        if actual >= exceptional_th:
-            score = 5.00
-            level = "exceptional"
-        elif actual >= good_th:
-            ratio = (actual - good_th) / max((exceptional_th - good_th), 1)
-            score = 4.75 + ratio * 0.25
-            level = "good"
-        elif actual >= meets_th:
-            ratio = (actual - meets_th) / max((good_th - meets_th), 1)
-            score = 4.50 + ratio * 0.25
-            level = "meets"
-        elif actual >= below_th:
-            ratio = (actual - below_th) / max((meets_th - below_th), 1)
-            score = 4.25 + ratio * 0.25
-            level = "below"
-        else:
-            score = 4.25
-            level = "below"
-    else:
-        # Lower is better
-        if actual <= exceptional_th:
-            score = 5.00
-            level = "exceptional"
-        elif actual <= good_th:
-            ratio = 1 - (actual - exceptional_th) / max((good_th - exceptional_th), 1)
-            score = 4.75 + ratio * 0.25
-            level = "good"
-        elif actual <= meets_th:
-            ratio = 1 - (actual - good_th) / max((meets_th - good_th), 1)
-            score = 4.50 + ratio * 0.25
-            level = "meets"
-        elif actual <= below_th:
-            ratio = 1 - (actual - meets_th) / max((below_th - meets_th), 1)
-            score = 4.25 + ratio * 0.25
-            level = "below"
-        else:
-            score = 4.25
-            level = "below"
+        # Find which level the actual value falls into (check from highest to lowest)
+        for i in range(len(valid_levels) - 1, -1, -1):
+            kr_th = kr_thresholds[i]
+            if actual >= kr_th:
+                if i == len(valid_levels) - 1:
+                    # At or above top level
+                    score = max_score
+                else:
+                    # Interpolate between this level and next
+                    next_kr_th = kr_thresholds[i + 1]
+                    if next_kr_th > kr_th:
+                        ratio = (actual - kr_th) / (next_kr_th - kr_th)
+                    else:
+                        ratio = 1.0
+                    base_score = level_scores[i]
+                    next_score = level_scores[i + 1]
+                    score = base_score + ratio * (next_score - base_score)
 
-    return {"score": round(min(max(score, 4.25), 5.00), 2), "level": level, "level_info": LEVELS[level]}
+                level_key = valid_levels[i]['key']
+                break
+    else:
+        # Lower is better - reverse logic
+        for i in range(len(valid_levels) - 1, -1, -1):
+            kr_th = kr_thresholds[i]
+            if actual <= kr_th:
+                if i == len(valid_levels) - 1:
+                    score = max_score
+                else:
+                    next_kr_th = kr_thresholds[i + 1]
+                    if next_kr_th < kr_th:
+                        ratio = 1 - (actual - next_kr_th) / (kr_th - next_kr_th)
+                    else:
+                        ratio = 1.0
+                    base_score = level_scores[i]
+                    next_score = level_scores[i + 1]
+                    score = base_score + ratio * (next_score - base_score)
+
+                level_key = valid_levels[i]['key']
+                break
+
+    final_score = round(min(max(score, min_score), max_score), 2)
+    return {"score": final_score, "level": level_key, "level_info": levels_dict[level_key]}
 
 
 def get_level_for_score(score: float) -> dict:
-    """NEW SCALE: 4.25, 4.50, 4.75, 5.00 (max)"""
-    if score >= 5.00:
-        return {**LEVELS['exceptional'], "key": "exceptional"}
-    elif score >= 4.75:
-        return {**LEVELS['good'], "key": "good"}
-    elif score >= 4.50:
-        return {**LEVELS['meets'], "key": "meets"}
-    else:
-        return {**LEVELS['below'], "key": "below"}
+    """Determine level for a given score using dynamic config."""
+    config = get_score_levels_config()
+    levels_dict = get_levels_dict()
+    sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'], reverse=True)
+
+    for level in sorted_levels:
+        if score >= level['threshold']:
+            return {**levels_dict[level['key']], "key": level['key']}
+
+    # Default to lowest level
+    lowest = sorted(config['levels'], key=lambda x: x['threshold'])[0]
+    return {**levels_dict[lowest['key']], "key": lowest['key']}
 
 
 def score_to_percentage(score: float) -> float:
-    """Convert score to percentage. NEW SCALE: 4.25 = 0%, 5.00 = 100%"""
-    return round(((score - 4.25) / 0.75) * 100, 1)
+    """Convert score to percentage using dynamic config."""
+    config = get_score_levels_config()
+    min_score = config['min_score']
+    max_score = config['max_score']
+    score_range = max_score - min_score
+    if score_range == 0:
+        return 100.0 if score >= max_score else 0.0
+    return round(((score - min_score) / score_range) * 100, 1)
 
 
 def calculate_weighted_objective_score(objective: dict) -> dict:
@@ -519,8 +749,14 @@ def calculate_weighted_department_score(department: dict) -> dict:
 
 
 def create_gauge(score: float, compact: bool = False) -> str:
-    """Returns HTML string with ECharts gauge - NEW SCALE: 4.25 to 5.00"""
+    """Returns HTML string with ECharts gauge using dynamic configuration."""
     import random
+    config = get_score_levels_config()
+    min_score = config['min_score']
+    max_score = config['max_score']
+    sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'])
+    score_range = max_score - min_score
+
     percentage = score_to_percentage(score)
     level_info = get_level_for_score(score)
     level_label = get_level_label(level_info['key'])
@@ -535,9 +771,21 @@ def create_gauge(score: float, compact: bool = False) -> str:
     pointer_width = 6 if compact else 10
     axis_width = 15 if compact else 24
 
-    # NEW SCALE: gauge from 4.25 to 5.00
-    # Color stops: 4.25-4.50 (below), 4.50-4.75 (meets), 4.75-5.00 (good), 5.00 (exceptional)
-    # Range is 0.75, so: below=0.33, meets=0.67, good=0.99, exceptional=1.0
+    # Build dynamic color stops based on configured levels
+    color_stops = []
+    for i, level in enumerate(sorted_levels):
+        if i == len(sorted_levels) - 1:
+            # Last level goes to 1.0
+            stop_position = 1.0
+        else:
+            # Calculate position as fraction of total range
+            next_threshold = sorted_levels[i + 1]['threshold']
+            stop_position = (next_threshold - min_score) / score_range if score_range > 0 else 1.0
+        color_stops.append(f"[{stop_position:.3f}, '{level['color']}']")
+
+    color_array = ",\n                            ".join(color_stops)
+    split_number = len(sorted_levels) - 1 if len(sorted_levels) > 1 else 1
+
     html = f'''
     <div id="{gauge_id}" style="width: 100%; height: {height}px;"></div>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -546,9 +794,9 @@ def create_gauge(score: float, compact: bool = False) -> str:
         var option = {{
             series: [{{
                 type: 'gauge',
-                min: 4.25,
-                max: 5.0,
-                splitNumber: 3,
+                min: {min_score},
+                max: {max_score},
+                splitNumber: {split_number},
                 radius: '90%',
                 center: ['50%', '60%'],
                 startAngle: 180,
@@ -557,10 +805,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     lineStyle: {{
                         width: {axis_width},
                         color: [
-                            [0.333, '#d9534f'],
-                            [0.667, '#f0ad4e'],
-                            [0.99, '#5cb85c'],
-                            [1, '#1e7b34']
+                            {color_array}
                         ]
                     }}
                 }},
@@ -880,33 +1125,63 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 # Results breakdown table (without weights)
                 st.markdown(f"#### {t('results_breakdown')}")
 
-                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th><th style='padding:6px; border:1px solid #2F5496; background:#d9534f; font-size:10px;'>{get_level_label('below')}<br><small style='font-size:9px;'>4.25</small></th><th style='padding:6px; border:1px solid #2F5496; background:#f0ad4e; color:#000; font-size:10px;'>{get_level_label('meets')}<br><small style='font-size:9px;'>4.50</small></th><th style='padding:6px; border:1px solid #2F5496; background:#5cb85c; font-size:10px;'>{get_level_label('good')}<br><small style='font-size:9px;'>4.75</small></th><th style='padding:6px; border:1px solid #2F5496; background:#1e7b34; font-size:10px;'>{get_level_label('exceptional')}<br><small style='font-size:9px;'>5.00</small></th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                # Get dynamic config levels - only use levels that exist in KR thresholds
+                score_config = get_score_levels_config()
+                sorted_config_levels = sorted(score_config['levels'], key=lambda x: x['threshold'])
+
+                # Use base 4 levels that exist in KR thresholds for the table
+                base_level_keys = ['below', 'meets', 'good', 'exceptional']
+                display_levels = [lvl for lvl in sorted_config_levels if lvl['key'] in base_level_keys]
+
+                # If no base levels found, use the first 4 sorted levels
+                if not display_levels:
+                    display_levels = sorted_config_levels[:4]
+
+                # Build dynamic header for levels
+                level_headers = ""
+                for lvl in display_levels:
+                    text_color = "#000" if lvl['key'] == 'meets' else "white"
+                    level_headers += f"<th style='padding:6px; border:1px solid #2F5496; background:{lvl['color']}; color:{text_color}; font-size:10px;'>{get_level_label(lvl['key'])}<br><small style='font-size:9px;'>{lvl['threshold']:.2f}</small></th>"
+
+                num_level_cols = len(display_levels)
+                total_cols = 4 + num_level_cols + 1  # KR, name, weight, fact + level cols + result
+
+                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th>{level_headers}<th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
                     th = kr.get('thresholds', {})
                     level = result['level']
 
-                    cells = {
-                        'below': '' if level != 'below' else 'background:#d9534f; color:white; font-weight:bold;',
-                        'meets': '' if level != 'meets' else 'background:#f0ad4e; color:#000; font-weight:bold;',
-                        'good': '' if level != 'good' else 'background:#5cb85c; color:white; font-weight:bold;',
-
-                        'exceptional': '' if level != 'exceptional' else 'background:#1e7b34; color:white; font-weight:bold;',
-                    }
+                    # Build cells dictionary dynamically based on display_levels
+                    cells = {}
+                    for lvl in display_levels:
+                        if level == lvl['key']:
+                            text_color = "#000" if lvl['key'] == 'meets' else "white"
+                            cells[lvl['key']] = f"background:{lvl['color']}; color:{text_color}; font-weight:bold;"
+                        else:
+                            cells[lvl['key']] = ''
 
                     # Handle qualitative vs quantitative display
                     if kr['metric_type'] == 'qualitative':
                         actual_display = kr.get('actual', 'E')
-                        th_texts = ["E", "D", "C", "B", "A"]
+                        th_texts = {lvl['key']: chr(ord('E') - i) for i, lvl in enumerate(display_levels)}
                     elif kr['metric_type'] == "higher_better":
                         actual_display = f"{kr['actual']}{kr.get('unit', '')}"
-                        th_texts = [f"<{th.get('below', 0)}", f"≥{th.get('meets', 0)}", f"≥{th.get('good', 0)}",
-                                    f"≥{th.get('exceptional', 0)}"]
+                        th_texts = {}
+                        for i, lvl in enumerate(display_levels):
+                            if i == 0:
+                                th_texts[lvl['key']] = f"<{th.get(lvl['key'], 0)}"
+                            else:
+                                th_texts[lvl['key']] = f"≥{th.get(lvl['key'], 0)}"
                     else:
                         actual_display = f"{kr['actual']}{kr.get('unit', '')}"
-                        th_texts = [f">{th.get('below', 0)}", f"≤{th.get('meets', 0)}", f"≤{th.get('good', 0)}",
-                                    f"≤{th.get('exceptional', 0)}"]
+                        th_texts = {}
+                        for i, lvl in enumerate(display_levels):
+                            if i == 0:
+                                th_texts[lvl['key']] = f">{th.get(lvl['key'], 0)}"
+                            else:
+                                th_texts[lvl['key']] = f"≤{th.get(lvl['key'], 0)}"
 
                     row_bg = '#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF'
                     kr_desc = kr.get('description', '') or kr['name']
@@ -922,7 +1197,12 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     else:
                         score_display = f"{result['score']:.2f}"
 
-                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#FFF2CC; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td><td style='padding:5px; border:1px solid #ddd; {cells['below']} font-size:11px;'>{th_texts[0]}</td><td style='padding:5px; border:1px solid #ddd; {cells['meets']} font-size:11px;'>{th_texts[1]}</td><td style='padding:5px; border:1px solid #ddd; {cells['good']} font-size:11px;'>{th_texts[2]}</td><td style='padding:5px; border:1px solid #ddd; {cells['exceptional']} font-size:11px;'>{th_texts[3]}</td><td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
+                    # Build level cells dynamically
+                    level_cells = ""
+                    for lvl in display_levels:
+                        level_cells += f"<td style='padding:5px; border:1px solid #ddd; {cells[lvl['key']]} font-size:11px;'>{th_texts[lvl['key']]}</td>"
+
+                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#FFF2CC; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td>{level_cells}<td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
 
                 # Weighted Calculation Row - matches Java frontend format
                 if obj_result.get('total_weight', 0) > 0:
@@ -942,13 +1222,13 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     # Show normalization if weights don't sum to 100
                     total_weight = sum((kr.get('weight', 0) or 0) for kr in krs)
                     if total_weight != 100 and total_weight > 0:
-                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
                     else:
-                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
                 else:
                     # Fallback to simple average formula (no weights)
                     kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
-                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='9' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
 
                 table_height = 70 + (len(krs) * 48) + 60
                 components.html(html_table, height=table_height, scrolling=False)
@@ -996,33 +1276,28 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             key=f"edit_weight_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"
                         )
 
-                        # Thresholds - only show for quantitative metrics
+                        # Thresholds - only show for quantitative metrics (dynamic levels)
+                        edit_level_config = get_score_levels_config()
+                        edit_sorted_lvls = sorted(edit_level_config['levels'], key=lambda x: x['order'])
+                        th = kr.get('thresholds', {})
+
                         if edit_type != "qualitative":
                             st.markdown("**Thresholds**")
-                            th = kr.get('thresholds', {})
-                            et1, et2, et3, et4 = st.columns(4)
-                            with et1:
-                                st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
-                                edit_below = st.number_input(t("below"), value=th.get('below', 0.0),
-                                                             key=f"edit_below_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
-                            with et2:
-                                st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
-                                edit_meets = st.number_input(t("meets"), value=th.get('meets', 60.0),
-                                                             key=f"edit_meets_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
-                            with et3:
-                                st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
-                                edit_good = st.number_input(t("good"), value=th.get('good', 75.0),
-                                                            key=f"edit_good_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
-                            with et4:
-                                st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
-                                edit_exc = st.number_input(t("exceptional"), value=th.get('exceptional', 100.0),
-                                                           key=f"edit_exc_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}")
+                            edit_threshold_cols = st.columns(len(edit_sorted_lvls))
+                            edit_threshold_values = {}
+
+                            for idx, lvl in enumerate(edit_sorted_lvls):
+                                default_val = (100.0 / (len(edit_sorted_lvls) - 1)) * idx if len(edit_sorted_lvls) > 1 else 0.0
+                                with edit_threshold_cols[idx]:
+                                    st.markdown(f"<small style='color:{lvl['color']};'>● {lvl['threshold']:.2f}</small>", unsafe_allow_html=True)
+                                    edit_threshold_values[lvl['key']] = st.number_input(
+                                        get_level_label(lvl['key']),
+                                        value=float(th.get(lvl['key'], default_val)),
+                                        key=f"edit_{lvl['key']}_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"
+                                    )
                         else:
                             # For qualitative, set default thresholds (not used but needed for data structure)
-                            edit_below = 0.0
-                            edit_meets = 60.0
-                            edit_good = 75.0
-                            edit_exc = 100.0
+                            edit_threshold_values = {lvl['key']: 0.0 for lvl in edit_sorted_lvls}
 
                         if st.button(f"✅ {t('update')} KR{kr_idx + 1}",
                                      key=f"update_btn_d{dept_idx}_o{obj_idx}_kr{kr_idx}_{kr['id']}"):
@@ -1034,13 +1309,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                                     "unit": edit_unit,
                                     "description": edit_description.strip(),
                                     "weight": edit_weight,
-                                    "thresholds": {
-                                        "below": edit_below,
-                                        "meets": edit_meets,
-                                        "good": edit_good,
-
-                                        "exceptional": edit_exc
-                                    }
+                                    "thresholds": edit_threshold_values
                                 })
                                 save_data()
                                 st.rerun()
@@ -1120,19 +1389,21 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     key=f"add_weight_d{dept_idx}_o{obj_idx}"
                 )
 
-                at1, at2, at3, at4 = st.columns(4)
-                with at1:
-                    st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
-                    add_below = st.number_input(t("below"), value=0.0, key=f"add_below_d{dept_idx}_o{obj_idx}")
-                with at2:
-                    st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
-                    add_meets = st.number_input(t("meets"), value=60.0, key=f"add_meets_d{dept_idx}_o{obj_idx}")
-                with at3:
-                    st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
-                    add_good = st.number_input(t("good"), value=75.0, key=f"add_good_d{dept_idx}_o{obj_idx}")
-                with at4:
-                    st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
-                    add_exc = st.number_input(t("exceptional"), value=100.0, key=f"add_exc_d{dept_idx}_o{obj_idx}")
+                # Dynamic threshold inputs based on config
+                add_level_config = get_score_levels_config()
+                add_sorted_lvls = sorted(add_level_config['levels'], key=lambda x: x['order'])
+                add_threshold_cols = st.columns(len(add_sorted_lvls))
+                add_threshold_values = {}
+
+                for idx, lvl in enumerate(add_sorted_lvls):
+                    default_val = (100.0 / (len(add_sorted_lvls) - 1)) * idx if len(add_sorted_lvls) > 1 else 0.0
+                    with add_threshold_cols[idx]:
+                        st.markdown(f"<small style='color:{lvl['color']};'>● {lvl['threshold']:.2f}</small>", unsafe_allow_html=True)
+                        add_threshold_values[lvl['key']] = st.number_input(
+                            get_level_label(lvl['key']),
+                            value=round(default_val, 1),
+                            key=f"add_{lvl['key']}_d{dept_idx}_o{obj_idx}"
+                        )
 
                 if st.button(t("add"), key=f"add_btn_d{dept_idx}_o{obj_idx}"):
                     if add_name.strip():
@@ -1140,8 +1411,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             "id": str(uuid.uuid4()), "name": add_name.strip(), "metric_type": add_type,
                             "unit": add_unit, "description": add_description.strip(),
                             "weight": add_weight,
-                            "thresholds": {"below": add_below, "meets": add_meets, "good": add_good,
-                                           "exceptional": add_exc},
+                            "thresholds": add_threshold_values,
                             "actual": 0.0
                         })
                         save_data()
@@ -1163,7 +1433,8 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 def save_data():
     data = {
         "departments": st.session_state.departments,
-        "language": st.session_state.get('language', 'en')
+        "language": st.session_state.get('language', 'en'),
+        "score_levels_config": get_score_levels_config()
     }
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -1187,41 +1458,85 @@ def load_data():
                     }]
                 else:
                     departments = []
-                return departments, data.get('language', 'en')
+                # Return with default config for old format
+                return departments, data.get('language', 'en'), DEFAULT_SCORE_LEVELS_CONFIG
             else:
-                # New format
-                return data.get('departments', []), data.get('language', 'en')
-    return [], 'en'
+                # New format - load config or use default
+                score_config = data.get('score_levels_config', DEFAULT_SCORE_LEVELS_CONFIG)
+                return data.get('departments', []), data.get('language', 'en'), score_config
+    return [], 'en', DEFAULT_SCORE_LEVELS_CONFIG
 
 
-def _create_score_formula(row: int, metric_type: str) -> str:
-    """Create Excel formula for score calculation based on metric type - NEW SCALE (max 5.00)"""
-    # Column references
+def _create_score_formula(row: int, metric_type: str, num_levels: int = 4) -> str:
+    """Create Excel formula for score calculation based on metric type - using dynamic config."""
+    config = get_score_levels_config()
+    sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'])
+    min_score = config['min_score']
+    max_score = config['max_score']
+
+    # Column references - threshold columns start at H
     actual_col = 'F'
-    type_col = 'E'
-    below_col = 'H'
-    meets_col = 'I'
-    good_col = 'J'
-    exceptional_col = 'J'
-    exceptional_col = 'L'
+    base_threshold_col = ord('H')
 
-    # Build cell references for this row
     actual = f'{actual_col}{row}'
-    below = f'{below_col}{row}'
-    meets = f'{meets_col}{row}'
-    good = f'{good_col}{row}'
-    exceptional = f'{exceptional_col}{row}'
-    exceptional = f'{exceptional_col}{row}'
-    type_cell = f'{type_col}{row}'
 
-    # Qualitative formula (for A/B/C/D/E grades) - NEW SCALE (max 5.00)
-    qualitative_formula = f'''IF({actual}="A",5,IF({actual}="B",4.75,IF({actual}="C",4.5,IF({actual}="D",4.25,4.25))))'''
+    # Build threshold column references for each level
+    threshold_refs = {}
+    for i, lvl in enumerate(sorted_levels):
+        col_letter = chr(base_threshold_col + i)
+        threshold_refs[lvl['key']] = f'{col_letter}{row}'
 
-    # Higher is better formula - NEW SCALE (max 5.00)
-    higher_better_formula = f'''IF({actual}>={exceptional},5,IF({actual}>={good},4.75+({actual}-{good})/MAX({exceptional}-{good},1)*0.25,IF({actual}>={meets},4.5+({actual}-{meets})/MAX({good}-{meets},1)*0.25,IF({actual}>={below},4.25+({actual}-{below})/MAX({meets}-{below},1)*0.25,4.25))))'''
+    # Build qualitative formula based on grade mapping
+    qual_mapping = config.get('qualitative_mapping', {})
+    qual_parts = []
+    for grade in ['A', 'B', 'C', 'D', 'E']:
+        if grade in qual_mapping:
+            level_key = qual_mapping[grade]
+            for lvl in sorted_levels:
+                if lvl['key'] == level_key:
+                    qual_parts.append(f'IF({actual}="{grade}",{lvl["threshold"]}')
+                    break
+    if qual_parts:
+        qualitative_formula = ','.join(qual_parts) + f',{min_score}' + ')' * len(qual_parts)
+    else:
+        qualitative_formula = str(min_score)
 
-    # Lower is better formula - NEW SCALE (max 5.00)
-    lower_better_formula = f'''IF({actual}<={exceptional},5,IF({actual}<={good},4.75+(1-({actual}-{exceptional})/MAX({good}-{exceptional},1))*0.25,IF({actual}<={meets},4.5+(1-({actual}-{good})/MAX({meets}-{good},1))*0.25,IF({actual}<={below},4.25+(1-({actual}-{meets})/MAX({below}-{meets},1))*0.25,4.25))))'''
+    # Build higher_better formula (nested IFs for N levels)
+    higher_parts = []
+    for i in range(len(sorted_levels) - 1, -1, -1):
+        lvl = sorted_levels[i]
+        th = threshold_refs[lvl['key']]
+        score = lvl['threshold']
+
+        if i == len(sorted_levels) - 1:
+            # Top level
+            higher_parts.append(f'IF({actual}>={th},{max_score}')
+        else:
+            next_lvl = sorted_levels[i + 1]
+            next_th = threshold_refs[next_lvl['key']]
+            next_score = next_lvl['threshold']
+            step = next_score - score
+            higher_parts.append(f'IF({actual}>={th},{score}+({actual}-{th})/MAX({next_th}-{th},1)*{step}')
+
+    higher_better_formula = ','.join(higher_parts) + f',{min_score}' + ')' * len(higher_parts)
+
+    # Build lower_better formula (similar logic, reversed)
+    lower_parts = []
+    for i in range(len(sorted_levels) - 1, -1, -1):
+        lvl = sorted_levels[i]
+        th = threshold_refs[lvl['key']]
+        score = lvl['threshold']
+
+        if i == len(sorted_levels) - 1:
+            lower_parts.append(f'IF({actual}<={th},{max_score}')
+        else:
+            next_lvl = sorted_levels[i + 1]
+            next_th = threshold_refs[next_lvl['key']]
+            next_score = next_lvl['threshold']
+            step = next_score - score
+            lower_parts.append(f'IF({actual}<={th},{score}+(1-({actual}-{th})/MAX({next_th}-{th},1))*{step}')
+
+    lower_better_formula = ','.join(lower_parts) + f',{min_score}' + ')' * len(lower_parts)
 
     # Main formula that checks metric type
     if metric_type == 'qualitative':
@@ -1232,18 +1547,32 @@ def _create_score_formula(row: int, metric_type: str) -> str:
         return f'={lower_better_formula}'
 
 
-def _create_performance_level_formula(row: int) -> str:
-    """Create Excel formula for performance level categorization - NEW SCALE (max 5.00)"""
-    score_cell = f'M{row}'
+def _create_performance_level_formula(row: int, num_levels: int = 4) -> str:
+    """Create Excel formula for performance level categorization - using dynamic config."""
+    config = get_score_levels_config()
+    sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'], reverse=True)
 
-    # Formula to categorize score into performance levels - NEW SCALE (max 5.00)
-    formula = f'''IF({score_cell}>=5,"Exceptional",IF({score_cell}>=4.75,"Good",IF({score_cell}>=4.5,"Meets","Below")))'''
+    # Calculate score column based on number of levels (base columns + N threshold columns + score column)
+    # Columns: A=Dept, B=Obj, C=ObjWeight, D=KR, E=Type, F=Actual, G=Unit, H+N-1=Thresholds, then Score
+    score_col_idx = 7 + num_levels + 1  # After thresholds
+    score_col = chr(ord('A') + score_col_idx - 1)
+    score_cell = f'{score_col}{row}'
+
+    # Build nested IF formula for N levels
+    parts = []
+    for lvl in sorted_levels:
+        label = get_level_name(lvl['key'], 'en')  # Use English for Excel
+        parts.append(f'IF({score_cell}>={lvl["threshold"]},"{label}"')
+
+    # Default to lowest level name
+    lowest_label = get_level_name(sorted_levels[-1]['key'], 'en')
+    formula = ','.join(parts) + f',"{lowest_label}"' + ')' * len(parts)
 
     return f'={formula}'
 
 
-def _apply_conditional_formatting(ws, max_row: int, colors: dict):
-    """Apply conditional formatting to score and performance level columns based on score values - NEW SCALE (max 5.00)"""
+def _apply_conditional_formatting(ws, max_row: int, colors: dict, num_levels: int = 4):
+    """Apply conditional formatting to score and performance level columns - using dynamic config."""
     from openpyxl.formatting.rule import Rule
     from openpyxl.styles.differential import DifferentialStyle
 
@@ -1251,76 +1580,61 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict):
     if max_row < 3:
         return
 
-    # Define fill patterns for each performance level
-    below_fill = PatternFill(start_color=colors['below'], end_color=colors['below'], fill_type='solid')
-    meets_fill = PatternFill(start_color=colors['meets'], end_color=colors['meets'], fill_type='solid')
-    good_fill = PatternFill(start_color=colors['good'], end_color=colors['good'], fill_type='solid')
-    exceptional_fill = PatternFill(start_color=colors['exceptional'], end_color=colors['exceptional'],
-                                   fill_type='solid')
+    config = get_score_levels_config()
+    sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'], reverse=True)
 
     white_font = Font(bold=True, color='FFFFFF')
 
-    # Apply conditional formatting to Score column (M) - NEW SCALE (max 5.00)
-    score_range = f'M2:M{max_row - 1}'
+    # Calculate score column based on number of levels
+    # Columns: A=Dept, B=Obj, C=ObjWeight, D=KR, E=Type, F=Actual, G=Unit, H+N-1=Thresholds, then Score, Level
+    score_col_idx = 7 + num_levels + 1
+    level_col_idx = score_col_idx + 1
+    score_col = chr(ord('A') + score_col_idx - 1)
+    level_col = chr(ord('A') + level_col_idx - 1)
 
-    # Exceptional: >= 5.00 (priority 1 - check first)
-    rule1 = Rule(type='cellIs', operator='greaterThanOrEqual', formula=['5.00'],
-                 stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=exceptional_fill, font=white_font))
-    rule1.priority = 1
-    ws.conditional_formatting.add(score_range, rule1)
+    score_range = f'{score_col}2:{score_col}{max_row - 1}'
+    level_range = f'{level_col}2:{level_col}{max_row - 1}'
 
-    # Good: 4.75 <= x < 5.00 (priority 2)
-    rule2 = Rule(type='cellIs', operator='between', formula=['4.75', '4.99'],
-                 stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=good_fill, font=white_font))
-    rule2.priority = 2
-    ws.conditional_formatting.add(score_range, rule2)
+    # Apply conditional formatting rules for each level
+    for priority, lvl in enumerate(sorted_levels, start=1):
+        color_hex = lvl['color'].lstrip('#')
+        fill = PatternFill(start_color=color_hex, end_color=color_hex, fill_type='solid')
 
-    # Meets: 4.50 <= x < 4.75 (priority 3)
-    rule3 = Rule(type='cellIs', operator='between', formula=['4.50', '4.74'],
-                 stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=meets_fill, font=white_font))
-    rule3.priority = 3
-    ws.conditional_formatting.add(score_range, rule3)
+        threshold = lvl['threshold']
 
-    # Below: < 4.50 (priority 4 - check last)
-    rule4 = Rule(type='cellIs', operator='lessThan', formula=['4.50'],
-                 stopIfTrue=True,
-                 dxf=DifferentialStyle(fill=below_fill, font=white_font))
-    rule4.priority = 4
-    ws.conditional_formatting.add(score_range, rule4)
+        # Score column rule
+        if priority == 1:
+            # Top level: >= threshold
+            rule = Rule(type='cellIs', operator='greaterThanOrEqual',
+                       formula=[str(threshold)],
+                       stopIfTrue=True,
+                       dxf=DifferentialStyle(fill=fill, font=white_font))
+        else:
+            # Other levels: between this and previous threshold
+            prev_lvl = sorted_levels[priority - 2]
+            upper_bound = round(prev_lvl['threshold'] - 0.01, 2)
+            rule = Rule(type='cellIs', operator='between',
+                       formula=[str(threshold), str(upper_bound)],
+                       stopIfTrue=True,
+                       dxf=DifferentialStyle(fill=fill, font=white_font))
 
-    # Apply conditional formatting to Performance Level column (N) based on Score column - NEW SCALE (max 5.00)
-    level_range = f'N2:N{max_row - 1}'
+        rule.priority = priority
+        ws.conditional_formatting.add(score_range, rule)
 
-    # Exceptional: when score >= 5.00 (priority 1)
-    lrule1 = Rule(type='expression', formula=[f'$M2>=5.00'],
-                  stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=exceptional_fill, font=white_font))
-    lrule1.priority = 1
-    ws.conditional_formatting.add(level_range, lrule1)
+        # Performance level column rule (based on score column)
+        if priority == 1:
+            lrule = Rule(type='expression', formula=[f'${score_col}2>={threshold}'],
+                        stopIfTrue=True,
+                        dxf=DifferentialStyle(fill=fill, font=white_font))
+        else:
+            prev_lvl = sorted_levels[priority - 2]
+            lrule = Rule(type='expression',
+                        formula=[f'AND(${score_col}2>={threshold},${score_col}2<{prev_lvl["threshold"]})'],
+                        stopIfTrue=True,
+                        dxf=DifferentialStyle(fill=fill, font=white_font))
 
-    # Good: when 4.75 <= score < 5.00 (priority 2)
-    lrule2 = Rule(type='expression', formula=[f'AND($M2>=4.75,$M2<5.00)'],
-                  stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=good_fill, font=white_font))
-    lrule2.priority = 2
-    ws.conditional_formatting.add(level_range, lrule2)
-
-    # Meets: when 4.50 <= score < 4.75 (priority 3)
-    lrule3 = Rule(type='expression', formula=[f'AND($M2>=4.50,$M2<4.75)'],
-                  stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=meets_fill, font=white_font))
-    lrule3.priority = 3
-    ws.conditional_formatting.add(level_range, lrule3)
-
-    # Below: when score < 4.50 (priority 4)
-    lrule4 = Rule(type='expression', formula=[f'$M2<4.50'],
-                  stopIfTrue=True,
-                  dxf=DifferentialStyle(fill=below_fill, font=white_font))
-    lrule4.priority = 4
-    ws.conditional_formatting.add(level_range, lrule4)
+        lrule.priority = priority
+        ws.conditional_formatting.add(level_range, lrule)
 
 
 def export_to_excel(departments):
@@ -1329,14 +1643,13 @@ def export_to_excel(departments):
     ws = wb.active
     ws.title = "OKR Export"
 
-    # Define colors for performance levels
-    colors = {
-        'below': 'd9534f',
-        'meets': 'f0ad4e',
-        'good': '5cb85c',
+    # Get dynamic level configuration
+    config = get_score_levels_config()
+    sorted_levels = sorted(config['levels'], key=lambda x: x['order'])
+    num_levels = len(sorted_levels)
 
-        'exceptional': '1e7b34'
-    }
+    # Build colors dict from config
+    colors = {lvl['key']: lvl['color'].lstrip('#') for lvl in sorted_levels}
 
     # Define header style
     header_font = Font(bold=True, color='FFFFFF')
@@ -1344,10 +1657,17 @@ def export_to_excel(departments):
     weight_fill = PatternFill(start_color='d97706', end_color='d97706', fill_type='solid')
     header_alignment = Alignment(horizontal='center', vertical='center')
 
-    # Add headers (without KR weight)
+    # Build dynamic headers with level names
+    level_headers = [get_level_name(lvl['key'], 'en') for lvl in sorted_levels]
     headers = [t('department'), t('objective'), t('objective_weight'), t('key_result'),
-               t('type'), t('actual'), t('unit'), t('below'), t('meets'), t('good'),
-               t('exceptional'), t('score').replace('🎯 ', ''), t('performance_level')]
+               t('type'), t('actual'), t('unit')] + level_headers + [t('score').replace('🎯 ', ''), t('performance_level')]
+
+    # Calculate column indices
+    THRESHOLD_START_COL = 8  # Column H
+    SCORE_COL = THRESHOLD_START_COL + num_levels
+    LEVEL_COL = SCORE_COL + 1
+    TOTAL_COLS = LEVEL_COL
+
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
@@ -1392,31 +1712,29 @@ def export_to_excel(departments):
                 ws.cell(row=row_idx, column=6, value=actual_display)
                 ws.cell(row=row_idx, column=7, value=kr.get('unit', ''))
 
-                # Thresholds (show N/A for qualitative)
+                # Dynamic thresholds based on levels
                 th = kr.get('thresholds', {})
                 if kr['metric_type'] == 'qualitative':
-                    ws.cell(row=row_idx, column=8, value='E')
-                    ws.cell(row=row_idx, column=9, value='D')
-                    ws.cell(row=row_idx, column=10, value='C')
-                    ws.cell(row=row_idx, column=11, value='B')
-                    ws.cell(row=row_idx, column=12, value='A')
+                    # For qualitative, show grade letters
+                    qual_grades = ['E', 'D', 'C', 'B', 'A']
+                    for i, lvl in enumerate(sorted_levels):
+                        grade = qual_grades[i] if i < len(qual_grades) else ''
+                        ws.cell(row=row_idx, column=THRESHOLD_START_COL + i, value=grade)
                 else:
-                    ws.cell(row=row_idx, column=8, value=th.get('below', 0))
-                    ws.cell(row=row_idx, column=9, value=th.get('meets', 0))
-                    ws.cell(row=row_idx, column=10, value=th.get('good', 0))
-                    ws.cell(row=row_idx, column=11, value=th.get('exceptional', 0))
+                    for i, lvl in enumerate(sorted_levels):
+                        ws.cell(row=row_idx, column=THRESHOLD_START_COL + i, value=th.get(lvl['key'], 0))
 
                 # Create Excel formula for score calculation
-                score_formula = _create_score_formula(row_idx, kr['metric_type'])
-                ws.cell(row=row_idx, column=13, value=score_formula)
+                score_formula = _create_score_formula(row_idx, kr['metric_type'], num_levels)
+                ws.cell(row=row_idx, column=SCORE_COL, value=score_formula)
 
                 # Create Excel formula for performance level
-                perf_level_formula = _create_performance_level_formula(row_idx)
-                ws.cell(row=row_idx, column=14, value=perf_level_formula)
+                perf_level_formula = _create_performance_level_formula(row_idx, num_levels)
+                ws.cell(row=row_idx, column=LEVEL_COL, value=perf_level_formula)
 
                 # Get cells for formatting
-                score_cell = ws.cell(row=row_idx, column=13)
-                level_cell = ws.cell(row=row_idx, column=14)
+                score_cell = ws.cell(row=row_idx, column=SCORE_COL)
+                level_cell = ws.cell(row=row_idx, column=LEVEL_COL)
 
                 # Set number format for score (2 decimal places)
                 score_cell.number_format = '0.00'
@@ -1424,9 +1742,8 @@ def export_to_excel(departments):
                 # Apply BASE cell coloring based on initial calculated score
                 # This ensures correct colors when file is first opened
                 # Conditional formatting will override these when formulas recalculate
-                base_fill = PatternFill(start_color=colors[initial_level],
-                                        end_color=colors[initial_level],
-                                        fill_type='solid')
+                base_color = colors.get(initial_level, 'd9534f')
+                base_fill = PatternFill(start_color=base_color, end_color=base_color, fill_type='solid')
 
                 score_cell.fill = base_fill
                 score_cell.font = Font(bold=True, color='FFFFFF')
@@ -1459,7 +1776,7 @@ def export_to_excel(departments):
             # Add darker border after each objective (bottom of last row)
             obj_end_row = row_idx - 1
             thick_bottom = Side(style='medium', color='000000')
-            for col in range(1, 15):
+            for col in range(1, TOTAL_COLS + 1):
                 cell = ws.cell(row=obj_end_row, column=col)
                 cell.border = Border(
                     left=cell.border.left if cell.border else None,
@@ -1480,8 +1797,9 @@ def export_to_excel(departments):
 
     # Apply conditional formatting to score and performance level columns (only if there's data)
     if row_idx > 2:
-        _apply_conditional_formatting(ws, row_idx, colors)
+        _apply_conditional_formatting(ws, row_idx, colors, num_levels)
 
+    # Set column widths
     ws.column_dimensions['A'].width = 20  # Department
     ws.column_dimensions['B'].width = 30  # Objective
     ws.column_dimensions['C'].width = 12  # Objective Weight
@@ -1489,13 +1807,17 @@ def export_to_excel(departments):
     ws.column_dimensions['E'].width = 15  # Type
     ws.column_dimensions['F'].width = 10  # Actual
     ws.column_dimensions['G'].width = 8  # Unit
-    ws.column_dimensions['H'].width = 10  # Below
-    ws.column_dimensions['I'].width = 10  # Meets
-    ws.column_dimensions['J'].width = 10  # Good
-    ws.column_dimensions['K'].width = 12  # Very Good
-    ws.column_dimensions['L'].width = 12  # Exceptional
-    ws.column_dimensions['M'].width = 10  # Score
-    ws.column_dimensions['N'].width = 18  # Performance Level
+
+    # Dynamic threshold columns
+    for i in range(num_levels):
+        col_letter = chr(ord('H') + i)
+        ws.column_dimensions[col_letter].width = 12
+
+    # Score and Level columns
+    score_col_letter = chr(ord('A') + SCORE_COL - 1)
+    level_col_letter = chr(ord('A') + LEVEL_COL - 1)
+    ws.column_dimensions[score_col_letter].width = 10
+    ws.column_dimensions[level_col_letter].width = 18
 
     # Save to BytesIO
     output = BytesIO()
@@ -1718,15 +2040,162 @@ def inject_global_css():
     """, unsafe_allow_html=True)
 
 
+@st.dialog("Score Level Settings", width="large")
+def score_levels_settings_dialog():
+    """Modal dialog for configuring score levels."""
+    settings_config = get_score_levels_config()
+
+    # Score Range Configuration
+    st.markdown(f"### {t('score_range')}")
+    range_col1, range_col2 = st.columns(2)
+    with range_col1:
+        new_min = st.number_input(t("min_score"), value=settings_config['min_score'], step=0.25, key="dlg_cfg_min_score")
+    with range_col2:
+        new_max = st.number_input(t("max_score"), value=settings_config['max_score'], step=0.25, key="dlg_cfg_max_score")
+
+    st.markdown("---")
+    st.markdown(f"### {t('performance_levels')}")
+
+    # Display existing levels
+    settings_sorted_levels = sorted(settings_config['levels'], key=lambda x: x['order'])
+
+    levels_to_update = []
+    levels_to_delete = []
+
+    for idx, level in enumerate(settings_sorted_levels):
+        with st.container(border=True):
+            lc1, lc2, lc3, lc4 = st.columns([2.5, 1.5, 1, 0.5])
+            with lc1:
+                new_name = st.text_input(
+                    f"{t('level_name')} (EN)",
+                    value=level['names'].get('en', ''),
+                    key=f"dlg_lvl_name_{level['key']}"
+                )
+            with lc2:
+                new_threshold = st.number_input(
+                    t("level_threshold"),
+                    value=level['threshold'],
+                    step=0.25,
+                    key=f"dlg_lvl_th_{level['key']}"
+                )
+            with lc3:
+                new_color = st.color_picker(
+                    t("level_color"),
+                    value=level['color'],
+                    key=f"dlg_lvl_color_{level['key']}"
+                )
+            with lc4:
+                st.write("")  # Spacer
+                if len(settings_sorted_levels) > 2:  # Keep at least 2 levels
+                    if st.button("🗑️", key=f"dlg_del_lvl_{level['key']}", help=t("delete_level")):
+                        levels_to_delete.append(level['key'])
+
+            levels_to_update.append({
+                "key": level['key'],
+                "order": idx,
+                "threshold": new_threshold,
+                "color": new_color,
+                "names": {
+                    "en": new_name,
+                    "ru": level['names'].get('ru', new_name),
+                    "uz": level['names'].get('uz', new_name)
+                }
+            })
+
+    # Add new level button
+    if st.button(f"➕ {t('add_level')}", key="dlg_add_new_level"):
+        # Generate new level
+        existing_keys = [lvl['key'] for lvl in settings_config['levels']]
+        new_key_num = 1
+        while f"level_{new_key_num}" in existing_keys:
+            new_key_num += 1
+        new_key = f"level_{new_key_num}"
+
+        new_level = {
+            "key": new_key,
+            "order": len(settings_config['levels']),
+            "threshold": round((new_min + new_max) / 2, 2),
+            "color": "#808080",
+            "names": {"en": "New Level", "ru": "Новый уровень", "uz": "Yangi daraja"}
+        }
+        settings_config['levels'].append(new_level)
+        st.session_state.score_levels_config = settings_config
+        st.rerun()
+
+    st.markdown("---")
+    st.markdown(f"### {t('grade_mapping')}")
+
+    # Qualitative grade mapping
+    level_options = [lvl['key'] for lvl in settings_sorted_levels if lvl['key'] not in levels_to_delete]
+    level_labels = {lvl['key']: get_level_name(lvl['key']) for lvl in settings_sorted_levels}
+
+    grade_cols = st.columns(5)
+    new_mapping = {}
+    for i, grade in enumerate(['A', 'B', 'C', 'D', 'E']):
+        with grade_cols[i]:
+            current = settings_config['qualitative_mapping'].get(grade, level_options[-1] if level_options else '')
+            if current not in level_options and level_options:
+                current = level_options[-1]
+            selected = st.selectbox(
+                f"{t('qualitative_grade')} {grade}",
+                options=level_options,
+                format_func=lambda x, labels=level_labels: labels.get(x, x),
+                index=level_options.index(current) if current in level_options else 0,
+                key=f"dlg_grade_map_{grade}"
+            )
+            new_mapping[grade] = selected
+
+    st.markdown("---")
+
+    # Save and Reset buttons
+    save_col, reset_col, cancel_col = st.columns(3)
+    with save_col:
+        if st.button(f"💾 {t('save_settings')}", type="primary", key="dlg_save_level_settings", use_container_width=True):
+            # Build new config from form values
+            new_config = {
+                "min_score": new_min,
+                "max_score": new_max,
+                "levels": [lvl for lvl in levels_to_update if lvl['key'] not in levels_to_delete],
+                "qualitative_mapping": new_mapping
+            }
+
+            # Re-sort and re-order levels by threshold
+            new_config['levels'] = sorted(new_config['levels'], key=lambda x: x['threshold'])
+            for i, lvl in enumerate(new_config['levels']):
+                lvl['order'] = i
+
+            # Validate
+            is_valid, error_msg = validate_score_levels_config(new_config)
+            if is_valid:
+                st.session_state.score_levels_config = new_config
+                save_data()
+                st.success(t("settings_saved"))
+                st.rerun()
+            else:
+                st.error(f"{t('invalid_config')}: {error_msg}")
+
+    with reset_col:
+        if st.button(f"🔄 {t('reset_defaults')}", key="dlg_reset_level_settings", use_container_width=True):
+            st.session_state.score_levels_config = DEFAULT_SCORE_LEVELS_CONFIG
+            save_data()
+            st.success(t("settings_saved"))
+            st.rerun()
+
+    with cancel_col:
+        if st.button(f"❌ {t('cancel')}", key="dlg_cancel_settings", use_container_width=True):
+            st.rerun()
+
+
 def main():
     st.set_page_config(page_title="OKR Tracker", page_icon="🎯", layout="wide")
     inject_global_css()
 
     # Initialize
     if 'initialized' not in st.session_state:
-        loaded_departments, loaded_lang = load_data()
+        loaded_departments, loaded_lang, loaded_config = load_data()
         st.session_state.departments = loaded_departments
         st.session_state.language = loaded_lang
+        st.session_state.score_levels_config = loaded_config
         st.session_state.new_krs = []
         st.session_state.initialized = True
 
@@ -1815,10 +2284,11 @@ def main():
                 st.success(t("data_saved"))
 
             if st.button("📂 " + t("load_data"), use_container_width=True):
-                dept, lang = load_data()
+                dept, lang, config = load_data()
                 if dept:
                     st.session_state.departments = dept
                     st.session_state.language = lang
+                    st.session_state.score_levels_config = config
                     st.success(t("data_loaded"))
                     st.rerun()
                 else:
@@ -1834,22 +2304,34 @@ def main():
                 use_container_width=True
             )
 
+            # ===== SCORE LEVEL SETTINGS =====
+            st.markdown(
+                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>⚙️ {t('score_level_settings')}</h3>",
+                unsafe_allow_html=True)
+
+            if st.button(f"⚙️ {t('configure_score_levels')}", use_container_width=True):
+                score_levels_settings_dialog()
+
     with col_main:
         # === MAIN DASHBOARD AREA ===
 
-        # Performance scale legend (simple title + colored boxes, no container)
+        # Performance scale legend - dynamic N columns based on config
+        config = get_score_levels_config()
+        sorted_levels = sorted(config['levels'], key=lambda x: x['order'])
+        levels_dict = get_levels_dict()
+
         st.markdown(f"""
             <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'> {t('performance_scale')}</p>
         """, unsafe_allow_html=True)
 
-        cols = st.columns(4)
-        for i, key in enumerate(["below", "meets", "good", "exceptional"]):
-            level = LEVELS[key]
+        cols = st.columns(len(sorted_levels))
+        for i, level_cfg in enumerate(sorted_levels):
+            level = levels_dict[level_cfg['key']]
             with cols[i]:
                 pct_range = f"{score_to_percentage(level['min'])}%-{score_to_percentage(level['max'])}%"
                 st.markdown(f"""
                     <div style='background:linear-gradient(135deg, {level['color']} 0%, {level['color']}dd 100%); color:white; padding:12px 10px; border-radius:10px; text-align:center; box-shadow:0 2px 8px {level['color']}30; margin-bottom:16px;'>
-                        <div style='font-size:12px; font-weight:700; margin-bottom:4px;'>{get_level_label(key)}</div>
+                        <div style='font-size:12px; font-weight:700; margin-bottom:4px;'>{get_level_label(level_cfg['key'])}</div>
                         <div style='font-size:11px; opacity:0.9;'>{level['min']:.2f} - {level['max']:.2f}</div>
                         <div style='font-size:10px; opacity:0.75; margin-top:2px;'>{pct_range}</div>
                     </div>
@@ -1922,26 +2404,38 @@ def main():
                     key="kr_weight_input"
                 )
 
-                # Show thresholds only for quantitative metrics
+                # Show thresholds only for quantitative metrics - dynamic levels
+                level_config = get_score_levels_config()
+                sorted_lvls = sorted(level_config['levels'], key=lambda x: x['order'])
+
                 if kr_type != "qualitative":
                     st.markdown(f"**{t('thresholds')}:**")
-                    t1, t2, t3, t4 = st.columns(4)
-                    with t1:
-                        st.markdown(f"<small style='color:#d9534f;'>● 4.25</small>", unsafe_allow_html=True)
-                        th_below = st.number_input(t("below"), value=0.0, key="th_below")
-                    with t2:
-                        st.markdown(f"<small style='color:#f0ad4e;'>● 4.50</small>", unsafe_allow_html=True)
-                        th_meets = st.number_input(t("meets"), value=60.0, key="th_meets")
-                    with t3:
-                        st.markdown(f"<small style='color:#5cb85c;'>● 4.75</small>", unsafe_allow_html=True)
-                        th_good = st.number_input(t("good"), value=75.0, key="th_good")
-                    with t4:
-                        st.markdown(f"<small style='color:#28a745;'>● 5.00</small>", unsafe_allow_html=True)
-                        th_exceptional = st.number_input(t("exceptional"), value=100.0, key="th_exceptional")
+                    threshold_cols = st.columns(len(sorted_lvls))
+                    threshold_values = {}
+
+                    # Calculate default values (evenly distributed 0-100)
+                    for idx, lvl in enumerate(sorted_lvls):
+                        default_val = (100.0 / (len(sorted_lvls) - 1)) * idx if len(sorted_lvls) > 1 else 0.0
+                        with threshold_cols[idx]:
+                            st.markdown(f"<small style='color:{lvl['color']};'>● {lvl['threshold']:.2f}</small>", unsafe_allow_html=True)
+                            threshold_values[lvl['key']] = st.number_input(
+                                get_level_label(lvl['key']),
+                                value=round(default_val, 1),
+                                key=f"th_{lvl['key']}"
+                            )
                 else:
-                    st.info(
-                        " Qualitative KRs use A/B/C/D/E grades: A=5.00 (Exceptional), B=4.75 (Good), C=4.50 (Meets), D=4.25 (Below), E=4.25 (Below)")
-                    th_below, th_meets, th_good, th_exceptional = 0, 0, 0, 0
+                    # Qualitative KR info box - dynamic text
+                    qual_mapping = level_config.get('qualitative_mapping', {})
+                    grade_text_parts = []
+                    for grade in ['A', 'B', 'C', 'D', 'E']:
+                        if grade in qual_mapping:
+                            level_key = qual_mapping[grade]
+                            for lvl in level_config['levels']:
+                                if lvl['key'] == level_key:
+                                    grade_text_parts.append(f"{grade}={lvl['threshold']:.2f} ({get_level_label(level_key)})")
+                                    break
+                    st.info(f" Qualitative KRs use A/B/C/D/E grades: {', '.join(grade_text_parts)}")
+                    threshold_values = {lvl['key']: 0.0 for lvl in sorted_lvls}
 
                 if st.button(t("add_kr")):
                     if kr_name.strip():
@@ -1950,8 +2444,7 @@ def main():
                             "unit": "" if kr_type == "qualitative" else kr_unit,
                             "description": kr_description.strip(),
                             "weight": kr_weight,
-                            "thresholds": {"below": th_below, "meets": th_meets,
-                                           "good": th_good, "exceptional": th_exceptional},
+                            "thresholds": threshold_values,
                             "actual": "E" if kr_type == "qualitative" else 0.0
                         })
                         st.rerun()
