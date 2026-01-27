@@ -772,25 +772,34 @@ def create_gauge(score: float, compact: bool = False) -> str:
     axis_width = 15 if compact else 24
 
     # Build dynamic color stops based on configured levels
+    # ECharts color format: [position, color] where color applies UP TO that position
     color_stops = []
     for i, level in enumerate(sorted_levels):
         if i == len(sorted_levels) - 1:
             # Last level goes to 1.0
             stop_position = 1.0
         else:
-            # Calculate position as fraction of total range
+            # Calculate position as fraction of total range (where this level ENDS)
             next_threshold = sorted_levels[i + 1]['threshold']
             stop_position = (next_threshold - min_score) / score_range if score_range > 0 else 1.0
         color_stops.append(f"[{stop_position:.3f}, '{level['color']}']")
 
     color_array = ",\n                            ".join(color_stops)
-    split_number = len(sorted_levels) - 1 if len(sorted_levels) > 1 else 1
+
+    # Build threshold values array for custom axis labels
+    thresholds_js = [level['threshold'] for level in sorted_levels]
+    thresholds_str = ", ".join([str(t) for t in thresholds_js])
+
+    # Use splitNumber = 100 so we have positions at 0.00, 0.01, 0.02, ... 1.00
+    # Then only show labels at positions matching our thresholds
+    split_number = 100
 
     html = f'''
     <div id="{gauge_id}" style="width: 100%; height: {height}px;"></div>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script>
         var chart = echarts.init(document.getElementById('{gauge_id}'));
+        var thresholds = [{thresholds_str}];
         var option = {{
             series: [{{
                 type: 'gauge',
@@ -819,17 +828,17 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     }}
                 }},
                 axisTick: {{
-                    length: 5,
-                    lineStyle: {{
-                        color: 'auto',
-                        width: 1
-                    }}
+                    show: false
                 }},
                 splitLine: {{
+                    show: true,
                     length: 10,
+                    distance: 0,
                     lineStyle: {{
-                        color: 'auto',
-                        width: 2
+                        color: '#444',
+                        width: function(index) {{
+                            return 0;
+                        }}
                     }}
                 }},
                 axisLabel: {{
@@ -837,7 +846,13 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     fontSize: {label_size},
                     distance: -35,
                     formatter: function (value) {{
-                        return value.toFixed(2);
+                        // Only show labels at threshold positions (with small tolerance for floating point)
+                        for (var i = 0; i < thresholds.length; i++) {{
+                            if (Math.abs(value - thresholds[i]) < 0.005) {{
+                                return thresholds[i].toFixed(2);
+                            }}
+                        }}
+                        return '';
                     }}
                 }},
                 title: {{
@@ -1125,17 +1140,12 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 # Results breakdown table (without weights)
                 st.markdown(f"#### {t('results_breakdown')}")
 
-                # Get dynamic config levels - only use levels that exist in KR thresholds
+                # Get dynamic config levels - show ALL configured levels
                 score_config = get_score_levels_config()
                 sorted_config_levels = sorted(score_config['levels'], key=lambda x: x['threshold'])
 
-                # Use base 4 levels that exist in KR thresholds for the table
-                base_level_keys = ['below', 'meets', 'good', 'exceptional']
-                display_levels = [lvl for lvl in sorted_config_levels if lvl['key'] in base_level_keys]
-
-                # If no base levels found, use the first 4 sorted levels
-                if not display_levels:
-                    display_levels = sorted_config_levels[:4]
+                # Use all configured levels for display
+                display_levels = sorted_config_levels
 
                 # Build dynamic header for levels
                 level_headers = ""
@@ -2043,7 +2053,16 @@ def inject_global_css():
 @st.dialog("Score Level Settings", width="large")
 def score_levels_settings_dialog():
     """Modal dialog for configuring score levels."""
-    settings_config = get_score_levels_config()
+    # Initialize dialog-specific session state for editing levels
+    if 'dialog_levels_config' not in st.session_state:
+        st.session_state.dialog_levels_config = None
+
+    # Load current config into dialog state if not already loaded
+    if st.session_state.dialog_levels_config is None:
+        import copy
+        st.session_state.dialog_levels_config = copy.deepcopy(get_score_levels_config())
+
+    settings_config = st.session_state.dialog_levels_config
 
     # Score Range Configuration
     st.markdown(f"### {t('score_range')}")
@@ -2075,7 +2094,8 @@ def score_levels_settings_dialog():
                 new_threshold = st.number_input(
                     t("level_threshold"),
                     value=level['threshold'],
-                    step=0.25,
+                    step=0.01,
+                    format="%.2f",
                     key=f"dlg_lvl_th_{level['key']}"
                 )
             with lc3:
@@ -2088,7 +2108,15 @@ def score_levels_settings_dialog():
                 st.write("")  # Spacer
                 if len(settings_sorted_levels) > 2:  # Keep at least 2 levels
                     if st.button("🗑️", key=f"dlg_del_lvl_{level['key']}", help=t("delete_level")):
-                        levels_to_delete.append(level['key'])
+                        # Remove from dialog config directly
+                        st.session_state.dialog_levels_config['levels'] = [
+                            lvl for lvl in st.session_state.dialog_levels_config['levels']
+                            if lvl['key'] != level['key']
+                        ]
+                        # Re-order remaining levels
+                        for i, lvl in enumerate(sorted(st.session_state.dialog_levels_config['levels'], key=lambda x: x['threshold'])):
+                            lvl['order'] = i
+                        st.rerun()
 
             levels_to_update.append({
                 "key": level['key'],
@@ -2118,16 +2146,15 @@ def score_levels_settings_dialog():
             "color": "#808080",
             "names": {"en": "New Level", "ru": "Новый уровень", "uz": "Yangi daraja"}
         }
-        settings_config['levels'].append(new_level)
-        st.session_state.score_levels_config = settings_config
+        st.session_state.dialog_levels_config['levels'].append(new_level)
         st.rerun()
 
     st.markdown("---")
     st.markdown(f"### {t('grade_mapping')}")
 
-    # Qualitative grade mapping
-    level_options = [lvl['key'] for lvl in settings_sorted_levels if lvl['key'] not in levels_to_delete]
-    level_labels = {lvl['key']: get_level_name(lvl['key']) for lvl in settings_sorted_levels}
+    # Qualitative grade mapping - use current dialog levels
+    level_options = [lvl['key'] for lvl in settings_sorted_levels]
+    level_labels = {lvl['key']: lvl['names'].get('en', lvl['key']) for lvl in settings_sorted_levels}
 
     grade_cols = st.columns(5)
     new_mapping = {}
@@ -2155,7 +2182,7 @@ def score_levels_settings_dialog():
             new_config = {
                 "min_score": new_min,
                 "max_score": new_max,
-                "levels": [lvl for lvl in levels_to_update if lvl['key'] not in levels_to_delete],
+                "levels": levels_to_update,
                 "qualitative_mapping": new_mapping
             }
 
@@ -2168,6 +2195,7 @@ def score_levels_settings_dialog():
             is_valid, error_msg = validate_score_levels_config(new_config)
             if is_valid:
                 st.session_state.score_levels_config = new_config
+                st.session_state.dialog_levels_config = None  # Clear dialog state
                 save_data()
                 st.success(t("settings_saved"))
                 st.rerun()
@@ -2176,13 +2204,13 @@ def score_levels_settings_dialog():
 
     with reset_col:
         if st.button(f"🔄 {t('reset_defaults')}", key="dlg_reset_level_settings", use_container_width=True):
-            st.session_state.score_levels_config = DEFAULT_SCORE_LEVELS_CONFIG
-            save_data()
-            st.success(t("settings_saved"))
+            import copy
+            st.session_state.dialog_levels_config = copy.deepcopy(DEFAULT_SCORE_LEVELS_CONFIG)
             st.rerun()
 
     with cancel_col:
         if st.button(f"❌ {t('cancel')}", key="dlg_cancel_settings", use_container_width=True):
+            st.session_state.dialog_levels_config = None  # Clear dialog state
             st.rerun()
 
 

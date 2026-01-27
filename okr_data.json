@@ -1,11 +1,6 @@
 {
   "departments": [
     {
-      "id": "ca39159f-c060-4f59-859c-184559b96aaa",
-      "name": "PMO",
-      "objectives": []
-    },
-    {
       "id": "cc3fff3c-b227-4253-88d6-1dc4e832e874",
       "name": "PMO",
       "objectives": [
@@ -20,14 +15,15 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 15.0,
+              "weight": 20.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 80.0,
+                "level_1": 100.0
               },
-              "actual": 90.0
+              "actual": 0.0
             },
             {
               "id": "46269c5e-7399-497c-a58a-3969bd63b4b4",
@@ -40,9 +36,10 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 100.0
             },
             {
               "id": "c6d8daba-9ab8-4e86-9295-8f12e7dc9b7b",
@@ -55,9 +52,10 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 100.0
             }
           ]
         },
@@ -76,10 +74,11 @@
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
-                "good": 75.0,
-                "exceptional": 100.0
+                "good": 70.0,
+                "exceptional": 80.0,
+                "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 70.0
             },
             {
               "id": "5b24efa1-78d4-49e1-82cd-0e1ceaef9127",
@@ -92,9 +91,10 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 90.0
             },
             {
               "id": "57f77296-7911-4c27-ab22-cecb62f67934",
@@ -107,9 +107,10 @@
                 "below": 0.0,
                 "meets": 60.0,
                 "good": 75.0,
-                "exceptional": 100.0
+                "exceptional": 90.0,
+                "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 85.0
             }
           ]
         },
@@ -199,7 +200,7 @@
         "key": "good",
         "order": 2,
         "threshold": 0.51,
-        "color": "#5cb85c",
+        "color": "#54c2d2",
         "names": {
           "en": "на уровне ожиданий",
           "ru": "Хорошо",
@@ -210,7 +211,7 @@
         "key": "exceptional",
         "order": 3,
         "threshold": 0.86,
-        "color": "#89d89c",
+        "color": "#58de77",
         "names": {
           "en": "превышает ожидания",
           "ru": "Исключительно",
