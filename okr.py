@@ -5,7 +5,7 @@ import json
 import uuid
 import os
 from io import BytesIO
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
 TRANSLATIONS = {
@@ -41,6 +41,10 @@ TRANSLATIONS = {
         "add": "➕ Add",
         "delete_objective": "🗑️ Delete Objective",
         "export_excel": "Export Excel",
+        "import_excel": "Import Excel",
+        "import_success": "Data imported successfully!",
+        "import_error": "Import failed: Invalid file format",
+        "import_warning": "Some data could not be imported",
         "save_data": "Save Data",
         "load_data": "📂 Load Data",
         "data_saved": "✅ Data saved!",
@@ -145,6 +149,10 @@ TRANSLATIONS = {
         "add": "➕ Добавить",
         "delete_objective": "🗑️ Удалить Цель",
         "export_excel": "Экспорт Excel",
+        "import_excel": "Импорт Excel",
+        "import_success": "Данные успешно импортированы!",
+        "import_error": "Ошибка импорта: неверный формат файла",
+        "import_warning": "Некоторые данные не удалось импортировать",
         "save_data": "Сохранить",
         "load_data": "📂 Загрузить",
         "data_saved": "✅ Сохранено!",
@@ -250,6 +258,10 @@ TRANSLATIONS = {
         "add": "➕ Қўшиш",
         "delete_objective": "🗑️ Ўчириш",
         "export_excel": "Excel Экспорт",
+        "import_excel": "Excel Импорт",
+        "import_success": "Маълумотлар муваффақиятли импорт қилинди!",
+        "import_error": "Импорт хатоси: нотўғри файл формати",
+        "import_warning": "Баъзи маълумотларни импорт қилиб бўлмади",
         "save_data": "Сақлаш",
         "load_data": "📂 Юклаш",
         "data_saved": "✅ Сақланди!",
@@ -1484,9 +1496,9 @@ def _create_score_formula(row: int, metric_type: str, num_levels: int = 4) -> st
     min_score = config['min_score']
     max_score = config['max_score']
 
-    # Column references - threshold columns start at H
-    actual_col = 'F'
-    base_threshold_col = ord('H')
+    # Column references - threshold columns start at I (after KR weight column)
+    actual_col = 'G'
+    base_threshold_col = ord('I')
 
     actual = f'{actual_col}{row}'
 
@@ -1563,8 +1575,8 @@ def _create_performance_level_formula(row: int, num_levels: int = 4) -> str:
     sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'], reverse=True)
 
     # Calculate score column based on number of levels (base columns + N threshold columns + score column)
-    # Columns: A=Dept, B=Obj, C=ObjWeight, D=KR, E=Type, F=Actual, G=Unit, H+N-1=Thresholds, then Score
-    score_col_idx = 7 + num_levels + 1  # After thresholds
+    # Columns: A=Dept, B=Obj, C=ObjWeight, D=KR, E=KRWeight, F=Type, G=Actual, H=Unit, I+N-1=Thresholds, then Score
+    score_col_idx = 8 + num_levels + 1  # After thresholds
     score_col = chr(ord('A') + score_col_idx - 1)
     score_cell = f'{score_col}{row}'
 
@@ -1596,8 +1608,8 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict, num_levels: in
     white_font = Font(bold=True, color='FFFFFF')
 
     # Calculate score column based on number of levels
-    # Columns: A=Dept, B=Obj, C=ObjWeight, D=KR, E=Type, F=Actual, G=Unit, H+N-1=Thresholds, then Score, Level
-    score_col_idx = 7 + num_levels + 1
+    # Columns: A=Dept, B=Obj, C=ObjWeight, D=KR, E=KRWeight, F=Type, G=Actual, H=Unit, I+N-1=Thresholds, then Score, Level
+    score_col_idx = 8 + num_levels + 1
     level_col_idx = score_col_idx + 1
     score_col = chr(ord('A') + score_col_idx - 1)
     level_col = chr(ord('A') + level_col_idx - 1)
@@ -1670,10 +1682,10 @@ def export_to_excel(departments):
     # Build dynamic headers with level names
     level_headers = [get_level_name(lvl['key'], 'en') for lvl in sorted_levels]
     headers = [t('department'), t('objective'), t('objective_weight'), t('key_result'),
-               t('type'), t('actual'), t('unit')] + level_headers + [t('score').replace('🎯 ', ''), t('performance_level')]
+               t('kr_weight'), t('type'), t('actual'), t('unit')] + level_headers + [t('score').replace('🎯 ', ''), t('performance_level')]
 
     # Calculate column indices
-    THRESHOLD_START_COL = 8  # Column H
+    THRESHOLD_START_COL = 9  # Column I (shifted by 1 for KR weight)
     SCORE_COL = THRESHOLD_START_COL + num_levels
     LEVEL_COL = SCORE_COL + 1
     TOTAL_COLS = LEVEL_COL
@@ -1681,7 +1693,7 @@ def export_to_excel(departments):
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
-        cell.fill = weight_fill if header == t('objective_weight') else header_fill
+        cell.fill = weight_fill if header in [t('objective_weight'), t('kr_weight')] else header_fill
         cell.alignment = header_alignment
 
     # Add data
@@ -1714,13 +1726,15 @@ def export_to_excel(departments):
                     actual_display = kr['actual']
 
                 # Write data (department only in first row of dept, objective only in first row of obj)
+                kr_weight = kr.get('weight') or 0  # handles None values
                 ws.cell(row=row_idx, column=1, value=dept_name if row_idx == dept_start_row else '')
                 ws.cell(row=row_idx, column=2, value=obj_name if row_idx == obj_start_row else '')
                 ws.cell(row=row_idx, column=3, value=f"{obj_weight}%" if row_idx == obj_start_row else '')
                 ws.cell(row=row_idx, column=4, value=kr['name'])
-                ws.cell(row=row_idx, column=5, value=type_display)
-                ws.cell(row=row_idx, column=6, value=actual_display)
-                ws.cell(row=row_idx, column=7, value=kr.get('unit', ''))
+                ws.cell(row=row_idx, column=5, value=f"{kr_weight}%")
+                ws.cell(row=row_idx, column=6, value=type_display)
+                ws.cell(row=row_idx, column=7, value=actual_display)
+                ws.cell(row=row_idx, column=8, value=kr.get('unit', ''))
 
                 # Dynamic thresholds based on levels
                 th = kr.get('thresholds', {})
@@ -1763,10 +1777,14 @@ def export_to_excel(departments):
                 level_cell.font = Font(bold=True, color='FFFFFF')
                 level_cell.alignment = Alignment(horizontal='center', vertical='center')
 
-                # Apply weight column styling (only objective weight)
+                # Apply weight column styling (objective weight and KR weight)
                 obj_weight_cell = ws.cell(row=row_idx, column=3)
                 obj_weight_cell.fill = PatternFill(start_color='fef3c7', end_color='fef3c7', fill_type='solid')
                 obj_weight_cell.font = Font(bold=True, color='d97706')
+
+                kr_weight_cell = ws.cell(row=row_idx, column=5)
+                kr_weight_cell.fill = PatternFill(start_color='fef3c7', end_color='fef3c7', fill_type='solid')
+                kr_weight_cell.font = Font(bold=True, color='d97706')
 
                 row_idx += 1
 
@@ -1814,13 +1832,14 @@ def export_to_excel(departments):
     ws.column_dimensions['B'].width = 30  # Objective
     ws.column_dimensions['C'].width = 12  # Objective Weight
     ws.column_dimensions['D'].width = 35  # Key Result
-    ws.column_dimensions['E'].width = 15  # Type
-    ws.column_dimensions['F'].width = 10  # Actual
-    ws.column_dimensions['G'].width = 8  # Unit
+    ws.column_dimensions['E'].width = 12  # KR Weight
+    ws.column_dimensions['F'].width = 15  # Type
+    ws.column_dimensions['G'].width = 10  # Actual
+    ws.column_dimensions['H'].width = 8   # Unit
 
     # Dynamic threshold columns
     for i in range(num_levels):
-        col_letter = chr(ord('H') + i)
+        col_letter = chr(ord('I') + i)
         ws.column_dimensions[col_letter].width = 12
 
     # Score and Level columns
@@ -1834,6 +1853,176 @@ def export_to_excel(departments):
     wb.save(output)
     output.seek(0)
     return output.getvalue()
+
+
+def import_from_excel(file_content):
+    """Import OKR data from Excel file.
+
+    Expected columns: Department, Objective, Objective Weight, Key Result, KR Weight,
+    Type, Actual, Unit, [Threshold columns...], Score, Performance Level
+
+    Returns: (departments_list, success_flag, message)
+    """
+    try:
+        wb = load_workbook(filename=BytesIO(file_content), data_only=True)
+        ws = wb.active
+
+        # Get header row to determine column mapping
+        headers = [cell.value for cell in ws[1]]
+        if not headers or len(headers) < 8:
+            return None, False, t('import_error')
+
+        # Get current score levels config to determine threshold columns
+        config = get_score_levels_config()
+        sorted_levels = sorted(config['levels'], key=lambda x: x['order'])
+        num_levels = len(sorted_levels)
+
+        # Column indices (0-based)
+        COL_DEPT = 0
+        COL_OBJ = 1
+        COL_OBJ_WEIGHT = 2
+        COL_KR = 3
+        COL_KR_WEIGHT = 4
+        COL_TYPE = 5
+        COL_ACTUAL = 6
+        COL_UNIT = 7
+        COL_THRESHOLD_START = 8
+
+        departments = {}
+        current_dept_name = None
+        current_obj_name = None
+        current_dept = None
+        current_obj = None
+
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or all(cell is None or cell == '' for cell in row[:4]):
+                continue  # Skip empty rows
+
+            # Get values, handling merged cells (empty values inherit from above)
+            dept_name = row[COL_DEPT] if row[COL_DEPT] else current_dept_name
+            obj_name = row[COL_OBJ] if row[COL_OBJ] else current_obj_name
+            obj_weight_raw = row[COL_OBJ_WEIGHT] if row[COL_OBJ_WEIGHT] else None
+            kr_name = row[COL_KR]
+            kr_weight_raw = row[COL_KR_WEIGHT] if len(row) > COL_KR_WEIGHT else None
+            type_raw = row[COL_TYPE] if len(row) > COL_TYPE else None
+            actual_raw = row[COL_ACTUAL] if len(row) > COL_ACTUAL else None
+            unit = row[COL_UNIT] if len(row) > COL_UNIT else ''
+
+            if not dept_name or not obj_name or not kr_name:
+                continue  # Skip rows without essential data
+
+            # Parse weights (remove % if present)
+            def parse_weight(val):
+                if val is None:
+                    return 0
+                if isinstance(val, str):
+                    val = val.replace('%', '').strip()
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    return 0
+
+            obj_weight = parse_weight(obj_weight_raw)
+            kr_weight = parse_weight(kr_weight_raw)
+
+            # Determine metric type
+            metric_type = 'higher_better'  # default
+            if type_raw:
+                type_str = str(type_raw).lower()
+                if 'qualitative' in type_str or 'a-e' in type_str or 'a/b/c' in type_str:
+                    metric_type = 'qualitative'
+                elif 'lower' in type_str or '↓' in type_str:
+                    metric_type = 'lower_better'
+                elif 'higher' in type_str or '↑' in type_str:
+                    metric_type = 'higher_better'
+
+            # Parse actual value
+            actual = 0
+            if actual_raw is not None:
+                if metric_type == 'qualitative':
+                    actual = str(actual_raw).upper().strip() if actual_raw else 'E'
+                    if actual not in ['A', 'B', 'C', 'D', 'E']:
+                        actual = 'E'
+                else:
+                    try:
+                        actual = float(actual_raw)
+                    except (ValueError, TypeError):
+                        actual = 0
+
+            # Parse thresholds from threshold columns
+            thresholds = {}
+            for i, lvl in enumerate(sorted_levels):
+                th_col = COL_THRESHOLD_START + i
+                if len(row) > th_col and row[th_col] is not None:
+                    try:
+                        if metric_type == 'qualitative':
+                            # For qualitative, thresholds are grade letters - skip
+                            pass
+                        else:
+                            thresholds[lvl['key']] = float(row[th_col])
+                    except (ValueError, TypeError):
+                        pass
+
+            # Create or get department
+            if dept_name != current_dept_name:
+                current_dept_name = dept_name
+                if dept_name not in departments:
+                    departments[dept_name] = {
+                        'id': str(uuid.uuid4()),
+                        'name': dept_name,
+                        'objectives': []
+                    }
+                current_dept = departments[dept_name]
+                current_obj = None
+                current_obj_name = None
+
+            # Create or get objective
+            if obj_name != current_obj_name:
+                current_obj_name = obj_name
+                # Check if objective already exists in this department
+                existing_obj = None
+                for obj in current_dept['objectives']:
+                    if obj['name'] == obj_name:
+                        existing_obj = obj
+                        break
+
+                if existing_obj:
+                    current_obj = existing_obj
+                    # Update weight if provided
+                    if obj_weight > 0:
+                        current_obj['weight'] = obj_weight
+                else:
+                    current_obj = {
+                        'id': str(uuid.uuid4()),
+                        'name': obj_name,
+                        'weight': obj_weight,
+                        'key_results': []
+                    }
+                    current_dept['objectives'].append(current_obj)
+
+            # Create key result
+            kr = {
+                'id': str(uuid.uuid4()),
+                'name': kr_name,
+                'metric_type': metric_type,
+                'unit': str(unit) if unit else '',
+                'description': '',
+                'weight': kr_weight,
+                'thresholds': thresholds,
+                'actual': actual
+            }
+            current_obj['key_results'].append(kr)
+
+        # Convert departments dict to list
+        departments_list = list(departments.values())
+
+        if not departments_list:
+            return None, False, t('import_error')
+
+        return departments_list, True, t('import_success')
+
+    except Exception as e:
+        return None, False, f"{t('import_error')}: {str(e)}"
 
 
 def inject_global_css():
@@ -2325,7 +2514,7 @@ def main():
                 save_data()
                 st.success(t("data_saved"))
 
-            if st.button("📂 " + t("load_data"), use_container_width=True):
+            if st.button(t("load_data"), use_container_width=True):
                 dept, lang, config = load_data()
                 if dept:
                     st.session_state.departments = dept
@@ -2345,6 +2534,23 @@ def main():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
+
+            # Import from Excel
+            uploaded_file = st.file_uploader(
+                t("import_excel"),
+                type=['xlsx', 'xls'],
+                key="excel_import_uploader"
+            )
+            if uploaded_file is not None:
+                file_content = uploaded_file.read()
+                departments, success, message = import_from_excel(file_content)
+                if success:
+                    st.session_state.departments = departments
+                    save_data()
+                    st.success(message)
+                    st.rerun()
+                else:
+                    st.error(message)
 
             # ===== SCORE LEVEL SETTINGS =====
             st.markdown(

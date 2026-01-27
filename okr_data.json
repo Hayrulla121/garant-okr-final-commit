@@ -1,16 +1,16 @@
 {
   "departments": [
     {
-      "id": "cc3fff3c-b227-4253-88d6-1dc4e832e874",
+      "id": "e2c55271-3633-4cad-a21b-704c5ca74df9",
       "name": "PMO",
       "objectives": [
         {
-          "id": "9eeabc51-6511-49aa-ab19-f2dc1a5417d9",
+          "id": "0392bf12-da9d-455d-894b-c489c8ed229a",
           "name": "Развитие аналитической инфраструктуры (Дашборды)",
-          "weight": 20,
+          "weight": 20.0,
           "key_results": [
             {
-              "id": "238093e0-47b3-4011-92bf-72cacb153cd9",
+              "id": "c533a354-afb5-4b11-a032-746856149579",
               "name": "Количество разработанных дашбордов (целевое: 300)",
               "metric_type": "higher_better",
               "unit": "%",
@@ -26,7 +26,7 @@
               "actual": 0.0
             },
             {
-              "id": "46269c5e-7399-497c-a58a-3969bd63b4b4",
+              "id": "14327eac-164b-4e16-91ca-70ee4a280a6c",
               "name": "Процент автоматизированных отчетов (%)",
               "metric_type": "higher_better",
               "unit": "%",
@@ -42,7 +42,7 @@
               "actual": 70.0
             },
             {
-              "id": "c6d8daba-9ab8-4e86-9295-8f12e7dc9b7b",
+              "id": "beebcaa4-d84c-40ea-8602-0b3b2474a61b",
               "name": "Количество активных пользователей дашбордов",
               "metric_type": "higher_better",
               "unit": "%",
@@ -60,12 +60,12 @@
           ]
         },
         {
-          "id": "7fe1d835-73c8-4df3-9c43-8b792579951c",
+          "id": "c65c72b4-f18d-4e8e-8413-3db47698ac05",
           "name": "Реализация AI проектов (целевое: 12 проектов)",
-          "weight": 20,
+          "weight": 20.0,
           "key_results": [
             {
-              "id": "ee642f82-8460-4916-ae50-678f6915d487",
+              "id": "6697ca05-efb2-47e4-9ddd-74d9d795c991",
               "name": "Количество запущенных AI проектов",
               "metric_type": "higher_better",
               "unit": "projects",
@@ -81,7 +81,7 @@
               "actual": 70.0
             },
             {
-              "id": "5b24efa1-78d4-49e1-82cd-0e1ceaef9127",
+              "id": "67833546-756f-464b-86a5-7d667b29c4f2",
               "name": "Процент AI проектов в продакшене (%)",
               "metric_type": "higher_better",
               "unit": "%",
@@ -97,7 +97,7 @@
               "actual": 90.0
             },
             {
-              "id": "57f77296-7911-4c27-ab22-cecb62f67934",
+              "id": "4b7a2f4c-b002-4344-8608-cdcaf916277a",
               "name": "Fraud Detection Rate - уровень обнаружения мошенничества (%)",
               "metric_type": "higher_better",
               "unit": "%",
@@ -115,12 +115,12 @@
           ]
         },
         {
-          "id": "0278af64-9bf4-413f-9bac-3acb8da5aef2",
+          "id": "585855ac-5fed-4f73-af5c-4f39c11a24d6",
           "name": "Монетизация Data & AI проектов",
-          "weight": 20,
+          "weight": 20.0,
           "key_results": [
             {
-              "id": "c5ad82c8-e8b5-4f50-8ec9-cc7443fa7887",
+              "id": "172b963f-ec5a-4227-bef3-33ed21fce9f7",
               "name": "Доход от AI проектов (млн сум)",
               "metric_type": "higher_better",
               "unit": "%",
@@ -136,7 +136,7 @@
               "actual": 0.0
             },
             {
-              "id": "e04315b5-b37d-4cc2-881c-99fb6c8c20c5",
+              "id": "2381a9a7-db36-49eb-84b1-bc59d2cbe4ef",
               "name": "ROI от Data проектов (%)",
               "metric_type": "higher_better",
               "unit": "%",
@@ -152,7 +152,7 @@
               "actual": 0.0
             },
             {
-              "id": "6ebcbee8-e21e-474a-ad07-870fb51283d7",
+              "id": "3c1a1a31-5ab6-469c-a7b5-056440f58434",
               "name": "Сокращение операционных расходов через AI (млн сум)",
               "metric_type": "higher_better",
               "unit": "(mln sum)",
