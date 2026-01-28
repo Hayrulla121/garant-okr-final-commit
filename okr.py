@@ -1693,8 +1693,18 @@ def export_to_excel(departments):
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=1, column=col_idx, value=header)
         cell.font = header_font
-        cell.fill = weight_fill if header in [t('objective_weight'), t('kr_weight')] else header_fill
         cell.alignment = header_alignment
+
+        # Apply appropriate fill color
+        if header in [t('objective_weight'), t('kr_weight')]:
+            cell.fill = weight_fill
+        elif col_idx >= THRESHOLD_START_COL and col_idx < THRESHOLD_START_COL + num_levels:
+            # Apply performance level colors to threshold column headers
+            level_idx = col_idx - THRESHOLD_START_COL
+            level_color = sorted_levels[level_idx]['color'].lstrip('#')
+            cell.fill = PatternFill(start_color=level_color, end_color=level_color, fill_type='solid')
+        else:
+            cell.fill = header_fill
 
     # Add data
     row_idx = 2
@@ -1729,9 +1739,13 @@ def export_to_excel(departments):
                 kr_weight = kr.get('weight') or 0  # handles None values
                 ws.cell(row=row_idx, column=1, value=dept_name if row_idx == dept_start_row else '')
                 ws.cell(row=row_idx, column=2, value=obj_name if row_idx == obj_start_row else '')
-                ws.cell(row=row_idx, column=3, value=f"{obj_weight}%" if row_idx == obj_start_row else '')
+                # Store objective weight as number (for formulas) with % display format
+                obj_weight_cell = ws.cell(row=row_idx, column=3, value=obj_weight if row_idx == obj_start_row else None)
+                obj_weight_cell.number_format = '0"%"'
                 ws.cell(row=row_idx, column=4, value=kr['name'])
-                ws.cell(row=row_idx, column=5, value=f"{kr_weight}%")
+                # Store KR weight as number (for formulas) with % display format
+                kr_weight_cell_data = ws.cell(row=row_idx, column=5, value=kr_weight)
+                kr_weight_cell_data.number_format = '0"%"'
                 ws.cell(row=row_idx, column=6, value=type_display)
                 ws.cell(row=row_idx, column=7, value=actual_display)
                 ws.cell(row=row_idx, column=8, value=kr.get('unit', ''))
@@ -1788,9 +1802,83 @@ def export_to_excel(departments):
 
                 row_idx += 1
 
-            # Merge objective cells if there are multiple KRs
-            if len(kr_list) > 1:
-                obj_end_row = row_idx - 1
+            # Add Objective Summary Row with weighted average formula
+            if kr_list:
+                obj_kr_end_row = row_idx - 1  # Last KR row for this objective
+
+                # Calculate objective score using Python for initial coloring
+                obj_result = calculate_weighted_objective_score(obj)
+                obj_score = obj_result['score']
+                obj_level = get_level_for_score(obj_score)
+
+                # Get performance level color for the entire summary row
+                obj_color = colors.get(obj_level['key'], '3730a3')
+                summary_fill = PatternFill(start_color=obj_color, end_color=obj_color, fill_type='solid')
+                summary_font = Font(bold=True, color='FFFFFF')
+                summary_alignment = Alignment(horizontal='center', vertical='center')
+
+                # Write summary row
+                ws.cell(row=row_idx, column=1, value='')  # Department (empty)
+                ws.cell(row=row_idx, column=2, value='')  # Objective name (empty, will be merged)
+                # Objective weight stored as number with % format
+                obj_weight_summary = ws.cell(row=row_idx, column=3, value=obj_weight)
+                obj_weight_summary.number_format = '0"%"'
+
+                # Label for summary
+                summary_label_cell = ws.cell(row=row_idx, column=4, value="📊 OBJECTIVE WEIGHTED SCORE")
+                summary_label_cell.fill = summary_fill
+                summary_label_cell.font = summary_font
+                summary_label_cell.alignment = Alignment(horizontal='right', vertical='center')
+
+                # Empty cells for KR weight, type, actual, unit - all with performance level color
+                for col in [5, 6, 7, 8]:
+                    cell = ws.cell(row=row_idx, column=col, value='')
+                    cell.fill = summary_fill
+
+                # Empty threshold columns - all with performance level color
+                for i in range(num_levels):
+                    cell = ws.cell(row=row_idx, column=THRESHOLD_START_COL + i, value='')
+                    cell.fill = summary_fill
+
+                # Create weighted average formula for objective score
+                # Formula: =IF(SUM(weights)>0, SUMPRODUCT(scores,weights)/SUM(weights), AVERAGE(scores))
+                score_col_letter = chr(ord('A') + SCORE_COL - 1)
+                weight_col_letter = 'E'  # KR Weight column
+
+                # Build ranges for this objective's KRs
+                score_range = f"{score_col_letter}{obj_start_row}:{score_col_letter}{obj_kr_end_row}"
+                weight_range = f"{weight_col_letter}{obj_start_row}:{weight_col_letter}{obj_kr_end_row}"
+
+                # Weights are now stored as numeric values, so use simple SUMPRODUCT
+                obj_score_formula = (
+                    f'=IF(SUM({weight_range})>0,'
+                    f'SUMPRODUCT({score_range},{weight_range})/SUM({weight_range}),'
+                    f'AVERAGE({score_range}))'
+                )
+
+                obj_score_cell = ws.cell(row=row_idx, column=SCORE_COL, value=obj_score_formula)
+                obj_score_cell.number_format = '0.00'
+                obj_score_cell.alignment = summary_alignment
+                obj_score_cell.fill = summary_fill
+                obj_score_cell.font = summary_font
+
+                # Performance level formula for objective
+                obj_perf_formula = _create_performance_level_formula(row_idx, num_levels)
+                obj_level_cell = ws.cell(row=row_idx, column=LEVEL_COL, value=obj_perf_formula)
+                obj_level_cell.fill = summary_fill
+                obj_level_cell.font = summary_font
+                obj_level_cell.alignment = summary_alignment
+
+                # Style the objective weight cell in summary row - same color as row
+                obj_weight_summary.fill = summary_fill
+                obj_weight_summary.font = summary_font
+                obj_weight_summary.alignment = summary_alignment
+
+                row_idx += 1
+
+            # Merge objective cells including the summary row
+            obj_end_row = row_idx - 1
+            if obj_end_row > obj_start_row:
                 # Merge objective name
                 ws.merge_cells(start_row=obj_start_row, start_column=2, end_row=obj_end_row, end_column=2)
                 # Merge objective weight
@@ -1801,8 +1889,7 @@ def export_to_excel(departments):
             obj_cell.alignment = Alignment(horizontal='center', vertical='center')
             obj_cell.font = Font(bold=True)
 
-            # Add darker border after each objective (bottom of last row)
-            obj_end_row = row_idx - 1
+            # Add darker border after each objective (bottom of summary row)
             thick_bottom = Side(style='medium', color='000000')
             for col in range(1, TOTAL_COLS + 1):
                 cell = ws.cell(row=obj_end_row, column=col)
@@ -1910,6 +1997,10 @@ def import_from_excel(file_content):
 
             if not dept_name or not obj_name or not kr_name:
                 continue  # Skip rows without essential data
+
+            # Skip objective summary rows (generated during export)
+            if 'OBJECTIVE WEIGHTED SCORE' in str(kr_name).upper():
+                continue
 
             # Parse weights (remove % if present)
             def parse_weight(val):
