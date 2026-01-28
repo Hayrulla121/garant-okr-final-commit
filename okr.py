@@ -7,7 +7,7 @@ import os
 from io import BytesIO
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-
+#
 TRANSLATIONS = {
     "en": {
         "title": "OKR Performance Tracker",
@@ -1556,7 +1556,7 @@ def _create_score_formula(row: int, metric_type: str, num_levels: int = 4) -> st
             next_th = threshold_refs[next_lvl['key']]
             next_score = next_lvl['threshold']
             step = next_score - score
-            lower_parts.append(f'IF({actual}<={th},{score}+(1-({actual}-{th})/MAX({next_th}-{th},1))*{step}')
+            lower_parts.append(f'IF({actual}<={th},{score}+(1-({actual}-{next_th})/MAX({th}-{next_th},1))*{step}')
 
     lower_better_formula = ','.join(lower_parts) + f',{min_score}' + ')' * len(lower_parts)
 

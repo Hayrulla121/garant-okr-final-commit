@@ -15,7 +15,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 20.0,
+              "weight": 50.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -31,7 +31,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 10.0,
+              "weight": 30.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -39,7 +39,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 70.0
+              "actual": 75.0
             },
             {
               "id": "beebcaa4-d84c-40ea-8602-0b3b2474a61b",
@@ -47,7 +47,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 10.0,
+              "weight": 20.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -70,7 +70,7 @@
               "metric_type": "higher_better",
               "unit": "projects",
               "description": "",
-              "weight": 0.0,
+              "weight": 70.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -86,7 +86,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 10.0,
+              "weight": 15.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -102,7 +102,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 10.0,
+              "weight": 15.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -125,7 +125,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 10.0,
+              "weight": 70.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -133,7 +133,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 90.0
             },
             {
               "id": "2381a9a7-db36-49eb-84b1-bc59d2cbe4ef",
@@ -141,7 +141,7 @@
               "metric_type": "higher_better",
               "unit": "%",
               "description": "",
-              "weight": 10.0,
+              "weight": 15.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -149,7 +149,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 60.0
             },
             {
               "id": "3c1a1a31-5ab6-469c-a7b5-056440f58434",
@@ -157,7 +157,7 @@
               "metric_type": "higher_better",
               "unit": "(mln sum)",
               "description": "",
-              "weight": 10.0,
+              "weight": 15.0,
               "thresholds": {
                 "below": 0.0,
                 "meets": 60.0,
@@ -180,7 +180,7 @@
       {
         "key": "below",
         "order": 0,
-        "threshold": 0.0,
+        "threshold": 0.3,
         "color": "#d9534f",
         "names": {
           "en": "не соотвтветствует",
@@ -191,7 +191,7 @@
       {
         "key": "meets",
         "order": 1,
-        "threshold": 0.31,
+        "threshold": 0.5,
         "color": "#f0ad4e",
         "names": {
           "en": "ниже ожиданий",
@@ -202,7 +202,7 @@
       {
         "key": "good",
         "order": 2,
-        "threshold": 0.51,
+        "threshold": 0.85,
         "color": "#54c2d2",
         "names": {
           "en": "на уровне ожиданий",
@@ -213,7 +213,7 @@
       {
         "key": "exceptional",
         "order": 3,
-        "threshold": 0.86,
+        "threshold": 0.97,
         "color": "#58de77",
         "names": {
           "en": "превышает ожидания",
@@ -224,7 +224,7 @@
       {
         "key": "level_1",
         "order": 4,
-        "threshold": 0.98,
+        "threshold": 1.0,
         "color": "#08ad00",
         "names": {
           "en": "исключительно",
