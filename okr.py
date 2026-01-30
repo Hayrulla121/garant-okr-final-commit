@@ -437,6 +437,25 @@ THEME_LIGHT = {
     "stats_card_border": "#cce0ff",
     "stats_card_text": "#0066cc",
     "stats_card_label": "#4a90d9",
+    # Table-specific colors
+    "table_header_bg": "#4472C4",
+    "table_border": "#2F5496",
+    "table_row_alt": "#F8F9FA",
+    "table_row_main": "#FFFFFF",
+    "table_text": "#1a202c",
+    "weight_cell_bg": "#FFF2CC",
+    "fact_cell_bg": "#E2EFDA",
+    "formula_row_bg": "#FFF2CC",
+    "formula_border": "#BF9000",
+    "cell_border": "#ddd",
+    # Badge colors
+    "badge_bg": "#f1f5f9",
+    "badge_border": "#e2e8f0",
+    "weight_badge_bg": "#fef3c7",
+    "weight_badge_color": "#d97706",
+    # Objective header
+    "objective_header_bg": "#FFC000",
+    "objective_header_text": "#000000",
 }
 
 THEME_DARK = {
@@ -468,6 +487,25 @@ THEME_DARK = {
     "stats_card_border": "#45475a",
     "stats_card_text": "#89b4fa",
     "stats_card_label": "#89b4fa",
+    # Table-specific colors
+    "table_header_bg": "#3d5a80",
+    "table_border": "#3d3d5c",
+    "table_row_alt": "#2a2a3e",
+    "table_row_main": "#1e1e2e",
+    "table_text": "#cdd6f4",
+    "weight_cell_bg": "#3d3414",
+    "fact_cell_bg": "#1a3d2a",
+    "formula_row_bg": "#3d3414",
+    "formula_border": "#6b5a00",
+    "cell_border": "#3d3d5c",
+    # Badge colors
+    "badge_bg": "#313244",
+    "badge_border": "#45475a",
+    "weight_badge_bg": "#463c1a",
+    "weight_badge_color": "#f9e2af",
+    # Objective header
+    "objective_header_bg": "#8b6914",
+    "objective_header_text": "#ffffff",
 }
 
 
@@ -475,6 +513,30 @@ def get_theme():
     """Get current theme based on session state"""
     is_dark = st.session_state.get('dark_mode', False)
     return THEME_DARK if is_dark else THEME_LIGHT
+
+
+def get_contrast_text_color(bg_color: str) -> str:
+    """Return appropriate text color (black or white) for contrast on given background.
+
+    Uses relative luminance calculation to determine if text should be dark or light.
+    """
+    # Remove # prefix and handle shorthand colors
+    hex_color = bg_color.lstrip('#')
+    if len(hex_color) == 3:
+        hex_color = ''.join([c*2 for c in hex_color])
+
+    try:
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+    except (ValueError, IndexError):
+        return "#ffffff"  # Default to white on error
+
+    # Calculate relative luminance using sRGB formula
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+    # Return black text for light backgrounds, white for dark
+    return "#000000" if luminance > 0.5 else "#ffffff"
 
 
 # Keep THEME as a reference that will be updated dynamically
@@ -1037,23 +1099,24 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
         # Use Streamlit container with border for the card
         with st.container(border=True):
             # Header section - build badges section
-            badge_bg = theme['card_bg'] if is_dark else '#f1f5f9'
-            badge_border = theme['card_border'] if is_dark else '#e2e8f0'
+            badge_bg = theme['badge_bg']
+            badge_border = theme['badge_border']
             badges_html = f"""<span style='display:inline-block; padding:6px 14px; background:{avg_level['color']}15; color:{avg_level['color']}; border:1px solid {avg_level['color']}30; border-radius:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
                         <span style='display:inline-block; padding:6px 14px; background:{badge_bg}; color:{theme['text_secondary']}; border:1px solid {badge_border}; border-radius:8px; font-size:12px; font-weight:600;'>{len(krs)} KRs</span>"""
 
-            weight_badge_bg = '#fef3c7' if not is_dark else '#463c1a'
-            weight_badge_color = '#d97706' if not is_dark else '#f9e2af'
+            weight_badge_bg = theme['weight_badge_bg']
+            weight_badge_color = theme['weight_badge_color']
             if obj_weight > 0:
                 badges_html += f"""
                         <span style='display:inline-block; padding:5px 12px; background:{weight_badge_bg}; color:{weight_badge_color}; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>"""
 
             card_gradient_end = theme['card_bg']
+            score_badge_text = get_contrast_text_color(avg_level['color'])
             st.markdown(f"""
                 <div style='background:linear-gradient(180deg, {avg_level['color']}08 0%, {card_gradient_end} 100%); padding:16px; margin-bottom:16px; border-bottom:3px solid {avg_level['color']}; border-radius:8px 8px 0 0;'>
                     <div style='display:flex; justify-content:space-between; align-items:flex-start; gap:12px;'>
                         <h3 style='margin:0; font-size:16px; color:{theme['text_primary']}; font-weight:700; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.4;'>📋 {objective['name']}</h3>
-                        <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:white; padding:8px 16px; border-radius:20px; font-size:15px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 3px 10px {avg_level['color']}50;'>{avg_score:.2f}</div>
+                        <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:{score_badge_text}; padding:8px 16px; border-radius:20px; font-size:15px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 3px 10px {avg_level['color']}50;'>{avg_score:.2f}</div>
                     </div>
                     <div style='margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;'>
                         {badges_html}
@@ -1163,17 +1226,18 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
     else:
         # FULL VIEW - Original detailed display with all tables and functionality wrapped in frame
         obj_weight = objective.get('weight') or 0  # handles None values
-        weight_badge_bg = '#fef3c7' if not is_dark else '#463c1a'
-        weight_badge_color = '#d97706' if not is_dark else '#f9e2af'
+        weight_badge_bg = theme['weight_badge_bg']
+        weight_badge_color = theme['weight_badge_color']
         weight_badge = f"<span style='background:{weight_badge_bg}; color:{weight_badge_color}; padding:4px 10px; border-radius:12px; font-weight:600; font-size:12px; margin-left:8px;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
 
         st.markdown(
             f"<div style='background:{theme['card_bg']}; border:none; border-radius:10px; padding:0; margin-bottom:20px; box-shadow:{theme['card_shadow']}; overflow:hidden;'>",
             unsafe_allow_html=True)
-        header_bg = '#FFC000' if not is_dark else '#8b6914'
-        header_text = '#000000' if not is_dark else '#ffffff'
+        header_bg = theme['objective_header_bg']
+        header_text = theme['objective_header_text']
+        weighted_score_text = get_contrast_text_color(avg_level['color'])
         st.markdown(
-            f"<div style='background:{header_bg}; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px; color:{header_text};'>📋 {objective['name']}{weight_badge}</span><span style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('weighted_score')}: {avg_score:.2f}</span></div>",
+            f"<div style='background:{header_bg}; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px; color:{header_text};'>📋 {objective['name']}{weight_badge}</span><span style='background:{avg_level['color']}; color:{weighted_score_text}; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('weighted_score')}: {avg_score:.2f}</span></div>",
             unsafe_allow_html=True)
 
         with st.expander(f"{objective['name']}", expanded=False):
@@ -1246,26 +1310,33 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 # Use all configured levels for display
                 display_levels = sorted_config_levels
 
-                # Theme-aware table colors
-                table_header_bg = '#3d5a80' if is_dark else '#4472C4'
-                table_border = '#3d3d5c' if is_dark else '#2F5496'
-                table_text = '#cdd6f4' if is_dark else 'white'
-                weight_cell_bg = '#3d3414' if is_dark else '#FFF2CC'
-                fact_cell_bg = '#1a3d2a' if is_dark else '#E2EFDA'
+                # Theme-aware table colors from theme config
+                table_header_bg = theme['table_header_bg']
+                table_border = theme['table_border']
+                table_text = theme['table_text']
+                weight_cell_bg = theme['weight_cell_bg']
+                fact_cell_bg = theme['fact_cell_bg']
 
-                # Build dynamic header for levels
+                # Build dynamic header for levels with proper contrast
                 level_headers = ""
                 for lvl in display_levels:
-                    text_color = "#000" if lvl['key'] == 'meets' else "white"
-                    level_headers += f"<th style='padding:6px; border:1px solid {table_border}; background:{lvl['color']}; color:{text_color}; font-size:10px;'>{get_level_label(lvl['key'])}<br><small style='font-size:9px;'>{lvl['threshold']:.2f}</small></th>"
+                    lvl_text_color = get_contrast_text_color(lvl['color'])
+                    level_headers += f"<th style='padding:6px; border:1px solid {table_border}; background:{lvl['color']}; color:{lvl_text_color}; font-size:10px;'>{get_level_label(lvl['key'])}<br><small style='font-size:9px; color:{lvl_text_color};'>{lvl['threshold']:.2f}</small></th>"
 
                 num_level_cols = len(display_levels)
                 total_cols = 4 + num_level_cols + 1  # KR, name, weight, fact + level cols + result
-                formula_row_bg = '#3d3414' if is_dark else '#FFF2CC'
-                formula_border = '#6b5a00' if is_dark else '#BF9000'
-                cell_border = '#3d3d5c' if is_dark else '#ddd'
-                table_bg = '#1e1e2e' if is_dark else '#ffffff'
-                html_table = f"<html><head><style>html, body {{ margin:0; padding:0; background:{table_bg}; }}</style></head><body><div style='background:{table_bg}; padding:5px;'><table style='width:100%; border-collapse:collapse; font-size:11px; background:{table_bg};'><thead><tr style='background:{table_header_bg}; color:{table_text};'><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('fact')}</th>{level_headers}<th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                formula_row_bg = theme['formula_row_bg']
+                formula_border = theme['formula_border']
+                cell_border = theme['cell_border']
+                table_bg = theme['card_bg']
+                header_text_color = get_contrast_text_color(table_header_bg)
+                # Build HTML table with explicit styles for iframe rendering
+                html_table = f"""<html><head><style>
+                    html, body {{ margin:0; padding:0; background:{table_bg}; color:{table_text}; }}
+                    table {{ width:100%; border-collapse:collapse; font-size:11px; background:{table_bg}; }}
+                    th, td {{ padding:5px; border:1px solid {cell_border}; }}
+                    th {{ background:{table_header_bg}; color:{header_text_color}; }}
+                </style></head><body><div style='background:{table_bg}; padding:5px;'><table><thead><tr><th>KR</th><th>{t('key_result')}</th><th>{t('weight')}</th><th>{t('fact')}</th>{level_headers}<th>{t('result')}</th></tr></thead><tbody>"""
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
@@ -1276,10 +1347,11 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     cells = {}
                     for lvl in display_levels:
                         if level == lvl['key']:
-                            text_color = "#000" if lvl['key'] == 'meets' else "white"
-                            cells[lvl['key']] = f"background:{lvl['color']}; color:{text_color}; font-weight:bold;"
+                            lvl_cell_text = get_contrast_text_color(lvl['color'])
+                            cells[lvl['key']] = f"background:{lvl['color']}; color:{lvl_cell_text}; font-weight:bold;"
                         else:
-                            cells[lvl['key']] = ''
+                            # Non-highlighted cells need explicit text color too
+                            cells[lvl['key']] = f"color:{table_text};"
 
                     # Handle qualitative vs quantitative display
                     if kr['metric_type'] == 'qualitative':
@@ -1302,7 +1374,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             else:
                                 th_texts[lvl['key']] = f"≤{th.get(lvl['key'], 0)}"
 
-                    row_bg = ('#2a2a3e' if kr_idx % 2 == 0 else '#1e1e2e') if is_dark else ('#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF')
+                    row_bg = theme['table_row_alt'] if kr_idx % 2 == 0 else theme['table_row_main']
                     kr_desc = kr.get('description', '') or kr['name']
                     kr_desc_escaped = kr_desc.replace('"', '&quot;').replace("'", "&#39;")
 
@@ -1311,8 +1383,9 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     weighted_contribution = result['score'] * kr_weight / 100 if kr_weight > 0 else 0
 
                     # Show score with weight contribution in result cell
+                    result_cell_text = get_contrast_text_color(result['level_info']['color'])
                     if kr_weight > 0:
-                        score_display = f"{result['score']:.2f}<br><small style='font-size:9px;'>x {kr_weight}% = {weighted_contribution:.2f}</small>"
+                        score_display = f"{result['score']:.2f}<br><small style='font-size:9px; color:{result_cell_text};'>x {kr_weight}% = {weighted_contribution:.2f}</small>"
                     else:
                         score_display = f"{result['score']:.2f}"
 
@@ -1321,7 +1394,9 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     for lvl in display_levels:
                         level_cells += f"<td style='padding:5px; border:1px solid {cell_border}; {cells[lvl['key']]} font-size:11px;'>{th_texts[lvl['key']]}</td>"
 
-                    html_table += f"<tr style='background:{row_bg}; color:{table_text};'><td style='padding:5px; border:1px solid {cell_border}; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid {cell_border}; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid {cell_border}; background:{weight_cell_bg}; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid {cell_border}; background:{fact_cell_bg}; font-weight:bold; font-size:11px;'>{actual_display}</td>{level_cells}<td style='padding:5px; border:1px solid {cell_border}; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
+                    weight_cell_text = get_contrast_text_color(weight_cell_bg)
+                    fact_cell_text = get_contrast_text_color(fact_cell_bg)
+                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid {cell_border}; color:{table_text}; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid {cell_border}; color:{table_text}; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid {cell_border}; background:{weight_cell_bg}; color:{weight_cell_text}; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid {cell_border}; background:{fact_cell_bg}; color:{fact_cell_text}; font-weight:bold; font-size:11px;'>{actual_display}</td>{level_cells}<td style='padding:5px; border:1px solid {cell_border}; background:{result['level_info']['color']}; color:{result_cell_text}; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
 
                 # Weighted Calculation Row - matches Java frontend format
                 if obj_result.get('total_weight', 0) > 0:
@@ -1340,14 +1415,18 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
 
                     # Show normalization if weights don't sum to 100
                     total_weight = sum((kr.get('weight', 0) or 0) for kr in krs)
+                    formula_row_text = get_contrast_text_color(formula_row_bg)
+                    formula_result_text = get_contrast_text_color(avg_level['color'])
                     if total_weight != 100 and total_weight > 0:
-                        html_table += f"<tr style='background:{formula_row_bg}; color:{table_text}; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
+                        html_table += f"<tr style='background:{formula_row_bg};'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; color:{formula_row_text}; text-align:right; font-size:11px; font-weight:bold;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:{formula_result_text}; font-size:14px; font-weight:bold;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
                     else:
-                        html_table += f"<tr style='background:{formula_row_bg}; color:{table_text}; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
+                        html_table += f"<tr style='background:{formula_row_bg};'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; color:{formula_row_text}; text-align:right; font-size:11px; font-weight:bold;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:{formula_result_text}; font-size:14px; font-weight:bold;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
                 else:
                     # Fallback to simple average formula (no weights)
                     kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
-                    html_table += f"<tr style='background:{formula_row_bg}; color:{table_text}; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
+                    formula_row_text = get_contrast_text_color(formula_row_bg)
+                    formula_result_text = get_contrast_text_color(avg_level['color'])
+                    html_table += f"<tr style='background:{formula_row_bg};'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; color:{formula_row_text}; text-align:right; font-size:11px; font-weight:bold;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:{formula_result_text}; font-size:14px; font-weight:bold;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
 
                 table_height = 70 + (len(krs) * 48) + 60
                 components.html(html_table, height=table_height, scrolling=False)
@@ -1478,8 +1557,9 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 gauge_html = create_gauge(avg_score)
                 components.html(gauge_html, height=260)
 
+                score_box_text = get_contrast_text_color(avg_level['color'])
                 st.markdown(
-                    f"<div style='text-align:center; margin-top:8px;'><div style='background:{avg_level['color']}; color:white; padding:10px; border-radius:8px; font-size:16px; font-weight:bold;'>{get_level_label(avg_level['key'])}<br><small style='font-size:14px;'>{avg_score:.2f} ({avg_pct}%)</small></div></div>",
+                    f"<div style='text-align:center; margin-top:8px;'><div style='background:{avg_level['color']}; color:{score_box_text}; padding:10px; border-radius:8px; font-size:16px; font-weight:bold;'>{get_level_label(avg_level['key'])}<br><small style='font-size:14px;'>{avg_score:.2f} ({avg_pct}%)</small></div></div>",
                     unsafe_allow_html=True)
 
             # Add KR section
@@ -2358,18 +2438,54 @@ def inject_global_css():
         background: {theme['card_bg']};
     }}
 
-    /* Input fields */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {{
+    /* Input fields - comprehensive coverage */
+    .stTextInput>div>div>input,
+    .stNumberInput>div>div>input,
+    .stSelectbox>div>div,
+    div[data-baseweb="input"] input,
+    div[data-baseweb="base-input"] input,
+    input[type="text"],
+    input[type="number"] {{
         font-family: 'Inter', sans-serif;
         border-radius: 8px;
-        border: 1px solid {theme['input_border']};
-        background: {theme['input_bg']};
-        color: {theme['text_primary']};
+        border: 1px solid {theme['input_border']} !important;
+        background: {theme['input_bg']} !important;
+        color: {theme['text_primary']} !important;
     }}
 
-    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {{
-        border-color: {theme['accent']};
+    .stTextInput>div>div>input:focus,
+    .stNumberInput>div>div>input:focus,
+    div[data-baseweb="input"] input:focus,
+    div[data-baseweb="base-input"] input:focus {{
+        border-color: {theme['accent']} !important;
         box-shadow: 0 0 0 3px {theme['accent']}20;
+    }}
+
+    /* Select/dropdown styling */
+    [data-baseweb="select"] {{
+        background: {theme['input_bg']} !important;
+    }}
+
+    [data-baseweb="select"] > div {{
+        background: {theme['input_bg']} !important;
+        border-color: {theme['input_border']} !important;
+    }}
+
+    [data-baseweb="popover"] {{
+        background: {theme['card_bg']} !important;
+    }}
+
+    [data-baseweb="menu"] {{
+        background: {theme['card_bg']} !important;
+    }}
+
+    [data-baseweb="menu"] li {{
+        background: {theme['card_bg']} !important;
+        color: {theme['text_primary']} !important;
+    }}
+
+    [data-baseweb="menu"] li:hover {{
+        background: {theme['input_bg']} !important;
     }}
 
     /* Radio buttons */
@@ -2448,9 +2564,14 @@ def inject_global_css():
         color: {theme['text_secondary']} !important;
     }}
 
-    /* Checkbox and text styling */
-    p, span, div {{
+    /* General text styling - scoped to main content */
+    .main p, .main span:not([class*="st"]), .stMarkdown {{
         color: {theme['text_primary']};
+    }}
+
+    /* Checkbox styling */
+    .stCheckbox label {{
+        color: {theme['text_primary']} !important;
     }}
 
     /* Container borders */
@@ -2459,14 +2580,47 @@ def inject_global_css():
         border-color: {theme['card_border']} !important;
     }}
 
-    /* Data editor styling */
-    .stDataFrame {{
-        background: {theme['card_bg']};
+    /* Data editor/DataFrame styling - CSS custom properties for glide-data-grid */
+    :root {{
+        --gdg-bg-cell: {theme['card_bg']};
+        --gdg-bg-cell-medium: {theme['input_bg']};
+        --gdg-bg-header: {theme['input_bg']};
+        --gdg-bg-header-has-focus: {theme['accent_light']};
+        --gdg-bg-header-hovered: {theme['input_bg']};
+        --gdg-text-dark: {theme['text_primary']};
+        --gdg-text-medium: {theme['text_secondary']};
+        --gdg-text-light: {theme['text_secondary']};
+        --gdg-text-header: {theme['text_primary']};
+        --gdg-border-color: {theme['cell_border']};
+        --gdg-accent-color: {theme['accent']};
+        --gdg-accent-light: {theme['accent_light']};
     }}
 
-    /* Table styling */
-    .stDataFrame table {{
+    [data-testid="stDataFrame"] {{
+        background-color: {theme['card_bg']} !important;
+        --gdg-bg-cell: {theme['card_bg']};
+        --gdg-text-dark: {theme['text_primary']};
+    }}
+
+    [data-testid="stDataFrame"] div {{
         color: {theme['text_primary']};
+    }}
+
+    /* Data editor container background */
+    [data-testid="stDataFrameResizable"] {{
+        background-color: {theme['card_bg']} !important;
+    }}
+
+    /* Canvas-based editor text color - use filter for dark mode */
+    [data-testid="stDataFrame"] canvas {{
+        background-color: {theme['card_bg']} !important;
+    }}
+
+    /* Text area styling */
+    .stTextArea textarea {{
+        background: {theme['input_bg']} !important;
+        color: {theme['text_primary']} !important;
+        border-color: {theme['input_border']} !important;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -2832,8 +2986,9 @@ def main():
             level = levels_dict[level_cfg['key']]
             with cols[i]:
                 pct_range = f"{score_to_percentage(level['min'])}%-{score_to_percentage(level['max'])}%"
+                scale_text_color = get_contrast_text_color(level['color'])
                 st.markdown(f"""
-                    <div style='background:linear-gradient(135deg, {level['color']} 0%, {level['color']}dd 100%); color:white; padding:12px 10px; border-radius:10px; text-align:center; box-shadow:0 2px 8px {level['color']}30; margin-bottom:16px;'>
+                    <div style='background:linear-gradient(135deg, {level['color']} 0%, {level['color']}dd 100%); color:{scale_text_color}; padding:12px 10px; border-radius:10px; text-align:center; box-shadow:0 2px 8px {level['color']}30; margin-bottom:16px;'>
                         <div style='font-size:12px; font-weight:700; margin-bottom:4px;'>{get_level_label(level_cfg['key'])}</div>
                         <div style='font-size:11px; opacity:0.9;'>{level['min']:.2f} - {level['max']:.2f}</div>
                         <div style='font-size:10px; opacity:0.75; margin-top:2px;'>{pct_range}</div>

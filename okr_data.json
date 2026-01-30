@@ -94,7 +94,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 100.0
             },
             {
               "id": "592e8026-70d6-4c08-9e91-5550c0ec149e",
@@ -149,7 +149,7 @@
                 "exceptional": -1.0,
                 "level_1": -2.0
               },
-              "actual": -1.0
+              "actual": -2.0
             },
             {
               "id": "c74e29f0-7dc4-4484-be77-285dad70c271",
@@ -181,7 +181,7 @@
                 "exceptional": -1.0,
                 "level_1": -2.0
               },
-              "actual": 0.0
+              "actual": -2.0
             }
           ]
         },
