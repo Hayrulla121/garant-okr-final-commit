@@ -1428,8 +1428,9 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     formula_result_text = get_contrast_text_color(avg_level['color'])
                     html_table += f"<tr style='background:{formula_row_bg};'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; color:{formula_row_text}; text-align:right; font-size:11px; font-weight:bold;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:{formula_result_text}; font-size:14px; font-weight:bold;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
 
-                table_height = 70 + (len(krs) * 48) + 60
-                components.html(html_table, height=table_height, scrolling=False)
+                # Calculate height: header(70) + rows(48 each) + formula row(80) + extra buffer(20)
+                table_height = 70 + (len(krs) * 48) + 100
+                components.html(html_table, height=table_height, scrolling=True)
 
                 # Edit KR section
                 st.markdown(f"#### {t('edit_krs')}")
