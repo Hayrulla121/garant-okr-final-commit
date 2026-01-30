@@ -942,7 +942,10 @@ def create_gauge(score: float, compact: bool = False) -> str:
     # Then only show labels at positions matching our thresholds
     split_number = 100
 
+    # Use color-scheme to prevent browser from applying its own dark/light mode
+    color_scheme = "dark" if is_dark else "light"
     html = f'''
+    <html><head><meta name="color-scheme" content="{color_scheme}"><style>html, body {{ margin:0; padding:0; background:{bg_color}; color-scheme:{color_scheme}; }}</style></head><body>
     <div id="{gauge_id}" style="width: 100%; height: {height}px; background: {bg_color};"></div>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script>
@@ -1029,6 +1032,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
         }};
         chart.setOption(option);
     </script>
+    </body></html>
     '''
     return html
 
@@ -1331,8 +1335,10 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 table_bg = theme['card_bg']
                 header_text_color = get_contrast_text_color(table_header_bg)
                 # Build HTML table with explicit styles for iframe rendering
-                html_table = f"""<html><head><style>
-                    html, body {{ margin:0; padding:0; background:{table_bg}; color:{table_text}; }}
+                # Use color-scheme to prevent browser from applying its own dark/light mode
+                color_scheme = "dark" if st.session_state.get('dark_mode', False) else "light"
+                html_table = f"""<html><head><meta name="color-scheme" content="{color_scheme}"><style>
+                    html, body {{ margin:0; padding:0; background:{table_bg}; color:{table_text}; color-scheme:{color_scheme}; }}
                     table {{ width:100%; border-collapse:collapse; font-size:11px; background:{table_bg}; }}
                     th, td {{ padding:5px; border:1px solid {cell_border}; }}
                     th {{ background:{table_header_bg}; color:{header_text_color}; }}
@@ -2470,6 +2476,12 @@ def inject_global_css():
     [data-baseweb="select"] > div {{
         background: {theme['input_bg']} !important;
         border-color: {theme['input_border']} !important;
+        color: {theme['text_primary']} !important;
+    }}
+
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] div[data-baseweb="tag"] {{
+        color: {theme['text_primary']} !important;
     }}
 
     [data-baseweb="popover"] {{
@@ -2497,7 +2509,11 @@ def inject_global_css():
         border: 1px solid {theme['card_border']};
     }}
 
-    .stRadio label {{
+    .stRadio label,
+    .stRadio label span,
+    .stRadio label p,
+    .stRadio [data-testid="stMarkdownContainer"],
+    .stRadio [data-testid="stMarkdownContainer"] p {{
         color: {theme['text_primary']} !important;
     }}
 
