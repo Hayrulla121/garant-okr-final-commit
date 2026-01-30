@@ -1,267 +1,509 @@
 ================================================================================
-                    OKR PERFORMANCE TRACKER - LOGIC EXPLANATION
+                    OKR PERFORMANCE TRACKER - LOGIC & FORMULAS
+                           Complete Technical Documentation
 ================================================================================
 
-This document explains how the OKR Performance Tracker calculates scores and
-evaluates performance in simple terms.
+This document explains all the logic, formulas, and business rules implemented
+in the OKR Performance Tracker application.
 
 ================================================================================
-1. SCORE SCALE (3.0 to 5.0)
+TABLE OF CONTENTS
 ================================================================================
-
-All Key Results (KRs) are scored on a scale from 3.0 to 5.0:
-
-    Score Range     Performance Level     Color
-    -----------     -----------------     -----
-    5.00            Exceptional          Dark Green
-    4.75 - 4.99     Very Good            Green
-    4.50 - 4.74     Good                 Light Green
-    4.25 - 4.49     Meets Expectations   Orange
-    3.00 - 4.24     Below Expectations   Red
-
-The score represents how well you're performing against your targets.
-
+1. Core Scoring Formulas
+2. Weighted Score Calculations
+3. Level Determination Logic
+4. Validation Rules
+5. Excel Export Formulas
+6. Data Import Logic
+7. Default Configuration
+8. Business Logic Rules
+9. Summary Formula Reference
 
 ================================================================================
-2. THREE TYPES OF METRICS
+1. CORE SCORING FORMULAS
 ================================================================================
 
-The system supports three types of Key Results:
+Location: okr.py, function calculate_score() (lines 526-626)
 
-A) HIGHER IS BETTER (↑)
-   - Used when bigger numbers mean better performance
-   - Examples: Revenue (%), Customer Satisfaction (%), Projects Completed (#)
+The system supports THREE types of Key Result (KR) metrics:
 
-B) LOWER IS BETTER (↓)
-   - Used when smaller numbers mean better performance
-   - Examples: Bug Count, Response Time (seconds), Error Rate (%)
+------------------------------------------------------------------------------
+A. QUALITATIVE METRICS (A/B/C/D/E Grades)
+------------------------------------------------------------------------------
 
-C) QUALITATIVE (📊)
-   - Used for subjective assessments using letter grades
-   - Grades: A, B, C, D, E
+Qualitative metrics use letter grades that map to predefined score thresholds:
 
+    Grade Mapping (lines 390-395):
+    +-------+-------------------+
+    | Grade | Maps to Level     |
+    +-------+-------------------+
+    | A     | exceptional       |
+    | B     | good              |
+    | C     | meets             |
+    | D     | below             |
+    | E     | below (default)   |
+    +-------+-------------------+
 
-================================================================================
-3. HOW SCORING WORKS - HIGHER IS BETTER (↑)
-================================================================================
+The actual score value is determined by the threshold configured for each level.
+If an invalid grade is entered, it defaults to 'E' (lowest score).
 
-When you set up a KR with "Higher is Better", you define 5 threshold values:
+------------------------------------------------------------------------------
+B. HIGHER-BETTER QUANTITATIVE METRICS
+------------------------------------------------------------------------------
 
-Example: Code Quality Percentage
-    - Below:        0%   (Minimum acceptable)
-    - Meets:       60%   (Meets expectations)
-    - Good:        75%   (Good performance)
-    - Very Good:   90%   (Very good performance)
-    - Exceptional: 100%  (Perfect/Exceptional)
+For metrics where higher actual values are better (e.g., revenue, sales).
 
-HOW IT CALCULATES THE SCORE:
+Logic Flow:
+1. Compare actual value against thresholds (from highest to lowest)
+2. Find the bracket where: actual >= threshold
+3. Interpolate score within that bracket
 
-Step 1: Compare your actual value to the thresholds
-Step 2: Find which range your value falls into
-Step 3: Calculate a proportional score within that range
+Interpolation Formula (line 596):
 
-EXAMPLES:
+    ratio = (actual - kr_threshold) / (next_kr_threshold - kr_threshold)
 
-If your actual value is 100% (reached Exceptional threshold):
-    → Score = 5.00 (Exceptional)
+Score Calculation (line 601):
 
-If your actual value is 92% (between Very Good and Exceptional):
-    → Falls in range 90% to 100%
-    → Position: 92% is 2/10 = 20% of the way from 90% to 100%
-    → Score = 4.75 + (0.20 × 0.24) = 4.79 (Very Good)
+    score = base_score + ratio * (next_score - base_score)
 
-If your actual value is 70% (between Meets and Good):
-    → Falls in range 60% to 75%
-    → Position: 70% is 10/15 = 67% of the way from 60% to 75%
-    → Score = 4.25 + (0.67 × 0.24) = 4.41 (Meets)
+Example:
+- Thresholds: exceptional=100, good=80, meets=60, below=40
+- Actual value: 70
+- Falls between "meets" (60) and "good" (80)
+- ratio = (70 - 60) / (80 - 60) = 0.5
+- score = meets_threshold + 0.5 * (good_threshold - meets_threshold)
 
-If your actual value is 50% (below Meets threshold):
-    → Falls in range 0% to 60%
-    → Position: 50% is 50/60 = 83% of the way from 0% to 60%
-    → Score = 3.00 + (0.83 × 1.24) = 4.03 (Below)
+Edge Case:
+- If actual >= top threshold: score = max_score
 
-If your actual value is below 0%:
-    → Score = 3.00 (Below - minimum score)
+------------------------------------------------------------------------------
+C. LOWER-BETTER QUANTITATIVE METRICS
+------------------------------------------------------------------------------
 
+For metrics where lower actual values are better (e.g., defects, response time).
 
-================================================================================
-4. HOW SCORING WORKS - LOWER IS BETTER (↓)
-================================================================================
+Logic Flow (REVERSED):
+1. Compare actual value against thresholds (from highest to lowest)
+2. Find the bracket where: actual <= threshold
+3. Interpolate score using reverse logic
 
-When you set up a KR with "Lower is Better", you define 5 threshold values:
+Reverse Interpolation Formula (line 615):
 
-Example: Bug Count
-    - Below:       10 bugs (Maximum acceptable)
-    - Meets:        7 bugs (Meets expectations)
-    - Good:         5 bugs (Good performance)
-    - Very Good:    2 bugs (Very good performance)
-    - Exceptional:  0 bugs (Perfect/No bugs)
+    ratio = 1 - (actual - next_kr_threshold) / (kr_threshold - next_kr_threshold)
 
-HOW IT CALCULATES THE SCORE:
+Score Calculation (line 620):
 
-The logic is REVERSED compared to "Higher is Better":
-- Lower values = Higher scores
-- Higher values = Lower scores
+    score = base_score + ratio * (next_score - base_score)
 
-EXAMPLES:
+Edge Case:
+- If actual <= top threshold (lowest number): score = max_score
 
-If your actual value is 0 bugs (reached Exceptional threshold):
-    → Score = 5.00 (Exceptional)
+------------------------------------------------------------------------------
+D. SCORE BOUNDARY ENFORCEMENT
+------------------------------------------------------------------------------
 
-If your actual value is 1 bug (between Exceptional and Very Good):
-    → Falls in range 0 to 2 bugs
-    → Position: 1 bug is 50% away from exceptional (0)
-    → Score = 4.75 + (0.50 × 0.24) = 4.87 (Very Good)
+All scores are bounded and rounded (line 625):
 
-If your actual value is 6 bugs (between Good and Meets):
-    → Falls in range 5 to 7 bugs
-    → Position: 6 bugs is 50% away from good (5)
-    → Score = 4.25 + (0.50 × 0.24) = 4.37 (Meets)
+    final_score = round(min(max(score, min_score), max_score), 2)
 
-If your actual value is 12 bugs (above Below threshold):
-    → Score = 3.00 (Below - minimum score)
+This ensures scores never exceed configured min/max values.
 
+------------------------------------------------------------------------------
+E. SCORE TO PERCENTAGE CONVERSION
+------------------------------------------------------------------------------
 
-================================================================================
-5. HOW SCORING WORKS - QUALITATIVE GRADES (📊)
-================================================================================
+Location: okr.py, function score_to_percentage() (lines 644-652)
 
-For qualitative assessments, you simply assign a letter grade:
+Formula:
 
-    Grade    Score    Performance Level
-    -----    -----    -----------------
-      A      5.00     Exceptional
-      B      4.75     Very Good
-      C      4.50     Good
-      D      4.25     Meets Expectations
-      E      3.00     Below Expectations
+    percentage = ((score - min_score) / (max_score - min_score)) * 100
 
-No thresholds are needed - just pick the grade that best represents performance.
+- Rounded to 1 decimal place
+- Returns 100.0 if score_range = 0 (division protection)
 
 
 ================================================================================
-6. CALCULATING OBJECTIVE SCORES
+2. WEIGHTED SCORE CALCULATIONS
 ================================================================================
 
-Each Objective contains multiple Key Results. The Objective score is calculated
-as a SIMPLE AVERAGE of all its Key Results:
+------------------------------------------------------------------------------
+A. OBJECTIVE SCORE (Weighted Average of Key Results)
+------------------------------------------------------------------------------
 
-    Objective Score = (KR1 Score + KR2 Score + KR3 Score + ...) / Number of KRs
+Location: okr.py, function calculate_weighted_objective_score() (lines 655-701)
 
-EXAMPLE:
+Formula:
 
-Objective: "Improve Code Quality"
-    KR1: Code in Time       → Actual: 80%  → Score: 4.58
-    KR2: Engagement         → Actual: 100% → Score: 5.00
-    KR3: Code with Bugs     → Actual: 3%   → Score: 4.62
+    Objective_Score = SUM(KR_score * KR_weight) / SUM(KR_weights)
 
-Objective Score = (4.58 + 5.00 + 4.62) / 3 = 4.73 (Very Good)
+Implementation:
+- Line 677: weighted_sum += result['score'] * kr_weight
+- Line 678: total_weight += kr_weight
+- Line 690: avg_score = weighted_sum / total_weight
 
+Individual KR weighted contribution (line 685):
 
-================================================================================
-7. CALCULATING DEPARTMENT SCORES
-================================================================================
+    weighted_score = KR_score * KR_weight / 100
 
-Each Department contains multiple Objectives. The Department score is calculated
-as a WEIGHTED AVERAGE of all its Objectives:
+Fallback Behavior:
+- If no weights are set: Uses simple average (equal weights)
+- If total_weight = 0: Returns score of 0
 
-    Department Score = (Obj1_Score × Obj1_Weight + Obj2_Score × Obj2_Weight + ...)
-                       / Total Weight
+------------------------------------------------------------------------------
+B. DEPARTMENT SCORE (Weighted Average of Objectives)
+------------------------------------------------------------------------------
 
-You can assign different weights to objectives (e.g., 20%, 30%, 50%) to
-indicate their relative importance.
+Location: okr.py, function calculate_weighted_department_score() (lines 704-760)
 
-EXAMPLE:
+Formula:
 
-Department: "IT"
-    Objective 1: "Code Quality"    → Score: 4.73, Weight: 20%
-    Objective 2: "Frontend"        → Score: 4.85, Weight: 30%
-    Objective 3: "Backend"         → Score: 4.90, Weight: 50%
+    Department_Score = SUM(Objective_score * Objective_weight) / SUM(Objective_weights)
 
-Department Score = (4.73 × 20 + 4.85 × 30 + 4.90 × 50) / 100
-                 = (94.6 + 145.5 + 245.0) / 100
-                 = 485.1 / 100
-                 = 4.85 (Very Good)
+Implementation:
+- Line 737: weighted_sum += obj_result['score'] * obj_weight
+- Line 738: total_weight += obj_weight
+- Line 750: avg_score = weighted_sum / total_weight
 
-NOTE: If weights don't sum to 100%, the system automatically normalizes them.
-      If no weights are set, all objectives are weighted equally.
+Default Weight Distribution (line 732):
+If no weight is specified for an objective:
 
+    default_weight = 100.0 / number_of_objectives_with_KRs
 
-================================================================================
-8. CONVERTING SCORES TO PERCENTAGES
-================================================================================
-
-The system can display scores as percentages using this formula:
-
-    Percentage = ((Score - 3.0) / 2.0) × 100%
-
-This converts the 3.0-5.0 scale to a 0-100% scale:
-
-    Score    Percentage    Performance Level
-    -----    ----------    -----------------
-    5.00     100.0%        Exceptional
-    4.75      87.5%        Very Good
-    4.50      75.0%        Good
-    4.25      62.5%        Meets Expectations
-    4.00      50.0%        Below Expectations
-    3.50      25.0%        Below Expectations
-    3.00       0.0%        Below Expectations
+Normalization:
+Weights are automatically normalized, so they don't need to sum exactly to 100%.
 
 
 ================================================================================
-9. KEY POINTS TO REMEMBER
+3. LEVEL DETERMINATION LOGIC
 ================================================================================
 
-1. All scores range from 3.0 (worst) to 5.0 (best)
+------------------------------------------------------------------------------
+A. GET PERFORMANCE LEVEL FOR SCORE
+------------------------------------------------------------------------------
 
-2. For "Higher is Better": Actual value >= threshold = better score
+Location: okr.py, function get_level_for_score() (lines 629-641)
 
-3. For "Lower is Better": Actual value <= threshold = better score
+Logic:
+1. Sort all configured levels by threshold (highest to lowest)
+2. Iterate through sorted levels
+3. Return first level where: score >= level['threshold']
+4. Fallback: Return lowest threshold level if no match
 
-4. Scores are calculated proportionally within threshold ranges, not just
-   at the threshold boundaries
+Example:
+- Score = 0.75
+- Levels: exceptional(0.97), good(0.85), meets(0.5), below(0.3)
+- Checks: 0.75 >= 0.97? No, 0.75 >= 0.85? No, 0.75 >= 0.5? Yes
+- Returns: "meets" level
 
-5. Objective scores = Simple average of all Key Results (equal weight)
+------------------------------------------------------------------------------
+B. LEVEL RANGE CALCULATION
+------------------------------------------------------------------------------
 
-6. Department scores = Weighted average of all Objectives (can set weights)
+Location: okr.py, function get_levels_dict() (lines 431-449)
 
-7. The system handles edge cases:
-   - Values beyond thresholds are capped at min (3.0) or max (5.0)
-   - Missing or null values default to 0 and score as 3.0
-   - If weights don't sum to 100%, they're automatically normalized
+Formula for level maximum (line 440):
 
-8. The score ranges create clear performance bands:
-   - 5.00:       Exceptional (hitting all targets perfectly)
-   - 4.75-4.99:  Very Good (exceeding most expectations)
-   - 4.50-4.74:  Good (performing well)
-   - 4.25-4.49:  Meets (acceptable performance)
-   - 3.00-4.24:  Below (needs improvement)
+    max_value = round(next_level_threshold - 0.01, 2)
 
+This creates non-overlapping ranges for each level.
+The last (highest) level uses its threshold as the max value.
 
-================================================================================
-10. VISUAL REPRESENTATION
-================================================================================
-
-The system displays scores using:
-
-1. GAUGE CHARTS
-   - Semi-circular gauge from 3 to 5
-   - Color-coded bands showing performance levels
-   - Needle points to your current score
-
-2. COLOR CODING
-   - Dark Green (#1e7b34):  Exceptional (5.00)
-   - Green (#28a745):       Very Good (4.75-4.99)
-   - Light Green (#5cb85c): Good (4.50-4.74)
-   - Orange (#f0ad4e):      Meets (4.25-4.49)
-   - Red (#d9534f):         Below (3.00-4.24)
-
-3. NUMERIC DISPLAY
-   - Shows exact score (e.g., 4.73)
-   - Shows percentage equivalent (e.g., 86.5%)
-   - Shows performance level text (e.g., "Very Good")
+Example:
+    Level       Threshold   Range
+    -------     ---------   -------------
+    below       0.30        0.00 - 0.49
+    meets       0.50        0.50 - 0.84
+    good        0.85        0.85 - 0.96
+    exceptional 0.97        0.97 - 1.00
 
 
 ================================================================================
-END OF DOCUMENT
+4. VALIDATION RULES
+================================================================================
+
+Location: okr.py, function validate_score_levels_config() (lines 487-518)
+
+The following constraints are enforced:
+
+1. MINIMUM LEVELS: At least 2 levels must be configured
+2. UNIQUE THRESHOLDS: All threshold values must be different
+3. ENGLISH NAMES: All levels must have an English name defined
+4. SCORE RANGE: min_score must be less than max_score (line 504)
+5. THRESHOLD BOUNDS: All thresholds must be within [min_score, max_score] (line 509)
+6. VALID QUALITATIVE MAPPING: Qualitative grade mappings must reference
+   existing level names (lines 512-516)
+
+
+================================================================================
+5. EXCEL EXPORT FORMULAS
+================================================================================
+
+Location: okr.py, function _create_score_formula() (lines 1492-1569)
+
+The system generates Excel formulas that replicate the scoring logic:
+
+------------------------------------------------------------------------------
+A. QUALITATIVE METRICS FORMULA
+------------------------------------------------------------------------------
+
+Excel Formula Pattern:
+
+    =IF(G2="A",threshold_A,
+       IF(G2="B",threshold_B,
+          IF(G2="C",threshold_C,
+             IF(G2="D",threshold_D,
+                IF(G2="E",threshold_E,min_score)))))
+
+Where Column G contains the actual grade value.
+
+------------------------------------------------------------------------------
+B. HIGHER-BETTER METRICS FORMULA
+------------------------------------------------------------------------------
+
+Excel Formula Pattern (with interpolation):
+
+    =IF(G2>=I2, max_score,
+       IF(G2>=J2, score_I + (G2-J2)/MAX(I2-J2,1) * step,
+          IF(G2>=K2, score_J + (G2-K2)/MAX(J2-K2,1) * step,
+             ... min_score)))
+
+Where:
+- Column G = Actual value
+- Columns I, J, K... = Thresholds for each level
+- MAX(denominator, 1) prevents division by zero
+
+------------------------------------------------------------------------------
+C. LOWER-BETTER METRICS FORMULA
+------------------------------------------------------------------------------
+
+Excel Formula Pattern (with reverse interpolation):
+
+    =IF(G2<=I2, max_score,
+       IF(G2<=J2, score_I + (1-(G2-J2)/MAX(I2-J2,1)) * step,
+          IF(G2<=K2, score_J + (1-(G2-K2)/MAX(J2-K2,1)) * step,
+             ... min_score)))
+
+------------------------------------------------------------------------------
+D. PERFORMANCE LEVEL FORMULA
+------------------------------------------------------------------------------
+
+Location: okr.py, function _create_performance_level_formula() (lines 1572-1593)
+
+Excel Formula Pattern:
+
+    =IF(score_cell>=threshold_1, "Level1",
+       IF(score_cell>=threshold_2, "Level2",
+          IF(score_cell>=threshold_3, "Level3", "DefaultLevel")))
+
+Thresholds are checked from highest to lowest.
+
+
+================================================================================
+6. DATA IMPORT LOGIC
+================================================================================
+
+Location: okr.py, function import_from_excel() (lines 1945-2116)
+
+------------------------------------------------------------------------------
+A. WEIGHT PARSING (lines 2006-2014)
+------------------------------------------------------------------------------
+
+    def parse_weight(val):
+        if val is None: return 0
+        if isinstance(val, str): val = val.replace('%', '').strip()
+        return float(val)
+
+Handles: None, "50%", "50", 50.0, etc.
+
+------------------------------------------------------------------------------
+B. METRIC TYPE DETECTION (lines 2020-2028)
+------------------------------------------------------------------------------
+
+    Input               Detected Type
+    ---------------     ----------------
+    "qualitative"       qualitative
+    "A-E" or "A/B/C"    qualitative
+    "lower" or "↓"      lower_better
+    "higher" or "↑"     higher_better
+    (default)           higher_better
+
+------------------------------------------------------------------------------
+C. ACTUAL VALUE NORMALIZATION (lines 2031-2041)
+------------------------------------------------------------------------------
+
+Qualitative Metrics:
+- Converts to uppercase
+- Validates A, B, C, D, or E
+- Invalid values default to 'E'
+
+Quantitative Metrics:
+- Converts to float
+- Invalid values default to 0
+
+------------------------------------------------------------------------------
+D. THRESHOLD PARSING (lines 2043-2055)
+------------------------------------------------------------------------------
+
+- Skipped for qualitative metrics (uses grade mapping)
+- Parsed as float for quantitative metrics
+- Invalid values may cause errors
+
+
+================================================================================
+7. DEFAULT CONFIGURATION
+================================================================================
+
+Location: okr_data.json (lines 4-71)
+
+------------------------------------------------------------------------------
+SCORE RANGE
+------------------------------------------------------------------------------
+    min_score: 0.0
+    max_score: 1.0
+
+------------------------------------------------------------------------------
+PERFORMANCE LEVELS
+------------------------------------------------------------------------------
+
+    Level Name      Threshold   Color       Description
+    -----------     ---------   -------     -----------
+    below           0.30        #d9534f     Red - Below expectations
+    meets           0.50        #f0ad4e     Orange - Meets minimum
+    good            0.85        #54c2d2     Cyan - Good performance
+    exceptional     0.97        #58de77     Green - Exceptional
+    level_1         1.00        #008c26     Dark Green - Top level
+
+------------------------------------------------------------------------------
+QUALITATIVE GRADE MAPPING
+------------------------------------------------------------------------------
+
+    Grade   Maps to Level
+    -----   -------------
+    A       exceptional
+    B       good
+    C       meets
+    D       below
+    E       below
+
+
+================================================================================
+8. BUSINESS LOGIC RULES
+================================================================================
+
+------------------------------------------------------------------------------
+DATA STRUCTURE HIERARCHY
+------------------------------------------------------------------------------
+
+    Organization
+        |
+        +-- Department
+                |
+                +-- Objective (has optional weight)
+                        |
+                        +-- Key Result (KR)
+                                |
+                                +-- name
+                                +-- metric_type (qualitative/higher_better/lower_better)
+                                +-- unit
+                                +-- weight
+                                +-- thresholds (per level)
+                                +-- actual_value
+
+------------------------------------------------------------------------------
+WEIGHT BEHAVIOR
+------------------------------------------------------------------------------
+
+1. If objective/KR weight = 0 or None:
+   - Equal distribution among items
+   - Default: 100.0 / count_of_items
+
+2. Weights don't need to sum exactly to 100%:
+   - System normalizes automatically
+
+3. Items with zero weight:
+   - Contribute nothing to weighted average
+
+------------------------------------------------------------------------------
+SCORE BOUNDARIES
+------------------------------------------------------------------------------
+
+1. All scores bounded: min(max(score, min_score), max_score)
+2. Rounded to 2 decimal places for display
+3. Percentages rounded to 1 decimal place
+
+------------------------------------------------------------------------------
+FALLBACK BEHAVIORS
+------------------------------------------------------------------------------
+
+    Scenario                        Result
+    --------                        ------
+    No KRs in objective             score = 0
+    No objectives in department     score = 0
+    Invalid qualitative grade       Defaults to 'E' (lowest)
+    No weights set                  Simple average (equal weights)
+    Division by zero                Protected with MAX(denominator, 1)
+
+
+================================================================================
+9. SUMMARY FORMULA REFERENCE
+================================================================================
+
++----------------------------------------------------------+------------------+
+| Formula                                                  | Purpose          |
++----------------------------------------------------------+------------------+
+| ratio = (actual - kr_th) / (next_kr_th - kr_th)          | Higher-better    |
+|                                                          | interpolation    |
++----------------------------------------------------------+------------------+
+| ratio = 1 - (actual - next_th) / (kr_th - next_th)       | Lower-better     |
+|                                                          | interpolation    |
++----------------------------------------------------------+------------------+
+| score = base + ratio * (next_score - base)               | Linear score     |
+|                                                          | interpolation    |
++----------------------------------------------------------+------------------+
+| percentage = ((score - min) / (max - min)) * 100         | Score to %       |
+|                                                          | conversion       |
++----------------------------------------------------------+------------------+
+| obj_score = SUM(kr_score * kr_weight) / SUM(kr_weight)   | Weighted KR      |
+|                                                          | average          |
++----------------------------------------------------------+------------------+
+| dept_score = SUM(obj_score * obj_wt) / SUM(obj_wt)       | Weighted         |
+|                                                          | objective avg    |
++----------------------------------------------------------+------------------+
+| default_weight = 100.0 / count_items                     | Equal weight     |
+|                                                          | distribution     |
++----------------------------------------------------------+------------------+
+| final_score = round(min(max(score, min), max), 2)        | Score boundary   |
+|                                                          | enforcement      |
++----------------------------------------------------------+------------------+
+| max_range = threshold(i+1) - 0.01                        | Level range      |
+|                                                          | calculation      |
++----------------------------------------------------------+------------------+
+| stop_position = (threshold - min) / range                | Gauge gradient   |
+|                                                          | positioning      |
++----------------------------------------------------------+------------------+
+
+
+================================================================================
+CODE FILE REFERENCES
+================================================================================
+
+Main Application:     okr.py
+Data Storage:         okr_data.json
+Configuration:        Contains score_levels_config with all customizable settings
+
+Key Functions:
+- calculate_score()                    : Lines 526-626
+- score_to_percentage()                : Lines 644-652
+- calculate_weighted_objective_score() : Lines 655-701
+- calculate_weighted_department_score(): Lines 704-760
+- get_level_for_score()                : Lines 629-641
+- get_levels_dict()                    : Lines 431-449
+- validate_score_levels_config()       : Lines 487-518
+- _create_score_formula()              : Lines 1492-1569
+- _create_performance_level_formula()  : Lines 1572-1593
+- import_from_excel()                  : Lines 1945-2116
+- create_gauge()                       : Lines 763-900
+
+================================================================================
+                              END OF DOCUMENT
 ================================================================================

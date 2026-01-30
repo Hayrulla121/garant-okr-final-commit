@@ -1,6 +1,359 @@
 {
-  "departments": [],
-  "language": "en",
+  "departments": [
+    {
+      "id": "156c8602-f52f-4fd9-ba6c-0628faef3f6a",
+      "name": "PMO",
+      "objectives": [
+        {
+          "id": "5c3396f7-338b-439b-ab5a-89f825d7af1f",
+          "name": "Цель 1: Обеспечить своевременную реализацию проектов",
+          "weight": 20.0,
+          "key_results": [
+            {
+              "id": "67242dcb-13ce-4464-97bf-18021b1897ca",
+              "name": "Процент проектов, завершенных в срок (%, больше - лучше)",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 60.0,
+                "meets": 70.0,
+                "good": 80.0,
+                "exceptional": 90.0,
+                "level_1": 100.0
+              },
+              "actual": 85.0
+            },
+            {
+              "id": "2223ea5d-0096-4731-925f-ee15fc00e4c1",
+              "name": "Среднее отклонение от сроков (дни, меньше - лучше",
+              "metric_type": "lower_better",
+              "unit": "days",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 30.0,
+                "meets": 20.0,
+                "good": 10.0,
+                "exceptional": 5.0,
+                "level_1": 0.0
+              },
+              "actual": 2.0
+            },
+            {
+              "id": "3c783a9f-8dd0-400f-b864-28ab230d8011",
+              "name": "Выполнение задач в ИСУП JIRA (%, от общего кол-ва задач)",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "weight": 20.0,
+              "thresholds": {
+                "below": 60.0,
+                "meets": 80.0,
+                "good": 90.0,
+                "exceptional": 95.0,
+                "level_1": 100.0
+              },
+              "actual": 80.0
+            },
+            {
+              "id": "a0ca445c-536a-4365-b1b9-ddc52140c6f0",
+              "name": "Необоснованные переносы задач (% задач с продлением сроков)",
+              "metric_type": "lower_better",
+              "unit": "%",
+              "description": "",
+              "weight": 20.0,
+              "thresholds": {
+                "below": 30.0,
+                "meets": 20.0,
+                "good": 10.0,
+                "exceptional": 5.0,
+                "level_1": 2.0
+              },
+              "actual": 5.0
+            }
+          ]
+        },
+        {
+          "id": "67144ba5-055f-41da-b021-e79597e169c8",
+          "name": "Цель 2: Управление рисками и бюджетом проектов",
+          "weight": 20.0,
+          "key_results": [
+            {
+              "id": "2ef1b2d1-9f82-4063-ad54-8bc2eb02cd1c",
+              "name": "Процент проектов в рамках бюджета (% )",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "weight": 40.0,
+              "thresholds": {
+                "below": 60.0,
+                "meets": 70.0,
+                "good": 80.0,
+                "exceptional": 90.0,
+                "level_1": 100.0
+              },
+              "actual": 0.0
+            },
+            {
+              "id": "592e8026-70d6-4c08-9e91-5550c0ec149e",
+              "name": "Количество неучтенных критических рисков - меньше - лучше",
+              "metric_type": "lower_better",
+              "unit": "%",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 10.0,
+                "meets": 5.0,
+                "good": 3.0,
+                "exceptional": 2.0,
+                "level_1": 0.0
+              },
+              "actual": 2.0
+            },
+            {
+              "id": "c23f271d-da6a-4acd-a57a-2822420d9dad",
+              "name": "Процент рисков с планом митигации (%, больше-лучше)",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 70.0,
+                "meets": 80.0,
+                "good": 90.0,
+                "exceptional": 95.0,
+                "level_1": 100.0
+              },
+              "actual": 0.0
+            }
+          ]
+        },
+        {
+          "id": "d78c9f0e-3354-4c63-b20e-3b3012e9ff9a",
+          "name": "Цель 3: Качество и своевременность  отчетности",
+          "weight": 15.0,
+          "key_results": [
+            {
+              "id": "335f1df7-0e92-4a3c-8a20-79834345bfb5",
+              "name": "Своевременность еженедельных отчетов (задержка дней, меньше лучше)",
+              "metric_type": "lower_better",
+              "unit": "days",
+              "description": "",
+              "weight": 40.0,
+              "thresholds": {
+                "below": 2.0,
+                "meets": 1.0,
+                "good": 0.0,
+                "exceptional": -1.0,
+                "level_1": -2.0
+              },
+              "actual": -1.0
+            },
+            {
+              "id": "c74e29f0-7dc4-4484-be77-285dad70c271",
+              "name": "Своевременность ежемесячных отчетов (задержка дней, меньше лучше)",
+              "metric_type": "lower_better",
+              "unit": "days",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 2.0,
+                "meets": 1.0,
+                "good": 0.0,
+                "exceptional": -1.0,
+                "level_1": -2.0
+              },
+              "actual": -2.0
+            },
+            {
+              "id": "4fcb9513-fd54-4b14-9cb6-afdc2c607bd5",
+              "name": "Своевременность квартальных отчетов (задержка дней, меньше лучше)",
+              "metric_type": "lower_better",
+              "unit": "days",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 2.0,
+                "meets": 1.0,
+                "good": 0.0,
+                "exceptional": -1.0,
+                "level_1": -2.0
+              },
+              "actual": 0.0
+            }
+          ]
+        },
+        {
+          "id": "986d1170-43ba-40ba-96e9-1bc56ab36a64",
+          "name": "Цель 4: Улучшение продуктов",
+          "weight": 15.0,
+          "key_results": [
+            {
+              "id": "dcf6f03f-5665-4c90-bd58-b55f8b77efaf",
+              "name": "Увеличить долю проектов, напрямую связанных со стратегическими целями Банка, до 85%",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "weight": 40.0,
+              "thresholds": {
+                "below": 60.0,
+                "meets": 70.0,
+                "good": 80.0,
+                "exceptional": 90.0,
+                "level_1": 100.0
+              },
+              "actual": 0.0
+            },
+            {
+              "id": "6fc0e9d5-842b-4ed5-93df-ba1dc19270a1",
+              "name": "% проектов с повторными багами (Defect/error rate)",
+              "metric_type": "lower_better",
+              "unit": "error",
+              "description": "",
+              "weight": 40.0,
+              "thresholds": {
+                "below": 10.0,
+                "meets": 5.0,
+                "good": 3.0,
+                "exceptional": 1.0,
+                "level_1": 0.0
+              },
+              "actual": 0.0
+            },
+            {
+              "id": "e1b70981-11a9-46cc-9c34-a76b4504ba23",
+              "name": "Провести 6 внутренних воркшопов по методологиям и новым технологиям",
+              "metric_type": "higher_better",
+              "unit": "",
+              "description": "",
+              "weight": 20.0,
+              "thresholds": {
+                "below": 2.0,
+                "meets": 4.0,
+                "good": 6.0,
+                "exceptional": 8.0,
+                "level_1": 10.0
+              },
+              "actual": 0.0
+            }
+          ]
+        },
+        {
+          "id": "0f5618bd-a91f-4e3c-a754-cb0d71224b38",
+          "name": "Цель 5: Повысить качество бизнес и системной аналитики",
+          "weight": 15.0,
+          "key_results": [
+            {
+              "id": "3a2115b1-9cf0-4fe8-a1fb-18f36ab81494",
+              "name": "Достичь 90% проектов в Camunda",
+              "metric_type": "higher_better",
+              "unit": "",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 60.0,
+                "meets": 80.0,
+                "good": 90.0,
+                "exceptional": 95.0,
+                "level_1": 100.0
+              },
+              "actual": 90.0
+            },
+            {
+              "id": "0c4ee76a-f0b9-45e3-aaa5-2bc9e89bd395",
+              "name": "Достичь уровня не более 10% изменение BPMN после создания",
+              "metric_type": "lower_better",
+              "unit": "",
+              "description": "",
+              "weight": 40.0,
+              "thresholds": {
+                "below": 10.0,
+                "meets": 5.0,
+                "good": 3.0,
+                "exceptional": 2.0,
+                "level_1": 0.0
+              },
+              "actual": 0.0
+            },
+            {
+              "id": "458713d1-0519-41e7-8d3e-3825888c8859",
+              "name": "Достичь покрытия требований по данным на уровне 80%",
+              "metric_type": "higher_better",
+              "unit": "",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 60.0,
+                "meets": 70.0,
+                "good": 80.0,
+                "exceptional": 90.0,
+                "level_1": 100.0
+              },
+              "actual": 0.0
+            }
+          ]
+        },
+        {
+          "id": "8d91648e-c380-4aa1-865e-7e14236d132a",
+          "name": "Цель 6: Усиление состава и человеческий капитал)",
+          "weight": 15.0,
+          "key_results": [
+            {
+              "id": "4925a7b0-74b1-4c9f-a140-f1cc9ca93f20",
+              "name": "Комплектация штата (6 свободных вакансий в штате) до 31.03.26",
+              "metric_type": "higher_better",
+              "unit": "",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 2.0,
+                "meets": 3.0,
+                "good": 4.0,
+                "exceptional": 5.0,
+                "level_1": 6.0
+              },
+              "actual": 5.0
+            },
+            {
+              "id": "6d7cefac-49d2-427d-94ed-621906ecf46f",
+              "name": "Набор и подготовка стажёров (16 вакансий)",
+              "metric_type": "higher_better",
+              "unit": "",
+              "description": "",
+              "weight": 40.0,
+              "thresholds": {
+                "below": 0.0,
+                "meets": 1.0,
+                "good": 3.0,
+                "exceptional": 5.0,
+                "level_1": 8.0
+              },
+              "actual": 3.0
+            },
+            {
+              "id": "bcef73e2-db7a-49c7-8302-f8a78d029319",
+              "name": "Увеличить % сотрудников с ростом оклада, должности за I-квл 26",
+              "metric_type": "higher_better",
+              "unit": "",
+              "description": "",
+              "weight": 30.0,
+              "thresholds": {
+                "below": 0.0,
+                "meets": 1.0,
+                "good": 2.0,
+                "exceptional": 3.0,
+                "level_1": 4.0
+              },
+              "actual": 4.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "language": "uz",
   "score_levels_config": {
     "min_score": 0.0,
     "max_score": 1.0,
@@ -12,8 +365,8 @@
         "color": "#d9534f",
         "names": {
           "en": "не соотвтветствует",
-          "ru": "Ниже ожидаемого",
-          "uz": "Ёмон"
+          "ru": "не соотвтветствует",
+          "uz": "не соотвтветствует"
         }
       },
       {
@@ -23,8 +376,8 @@
         "color": "#f0ad4e",
         "names": {
           "en": "ниже ожиданий",
-          "ru": "На уровне ожиданий",
-          "uz": "Кутилган"
+          "ru": "ниже ожиданий",
+          "uz": "ниже ожиданий"
         }
       },
       {
@@ -34,8 +387,8 @@
         "color": "#54c2d2",
         "names": {
           "en": "на уровне ожиданий",
-          "ru": "Хорошо",
-          "uz": "Яхши"
+          "ru": "на уровне ожиданий",
+          "uz": "на уровне ожиданий"
         }
       },
       {
@@ -45,8 +398,8 @@
         "color": "#58de77",
         "names": {
           "en": "превышает ожидания",
-          "ru": "Исключительно",
-          "uz": "Фантастик"
+          "ru": "превышает ожидания",
+          "uz": "превышает ожидания"
         }
       },
       {
@@ -56,8 +409,8 @@
         "color": "#008c26",
         "names": {
           "en": "исключительно",
-          "ru": "Новый уровень",
-          "uz": "Yangi daraja"
+          "ru": "исключительно",
+          "uz": "исключительно"
         }
       }
     ],

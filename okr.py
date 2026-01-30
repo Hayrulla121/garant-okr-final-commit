@@ -116,6 +116,10 @@ TRANSLATIONS = {
         "invalid_config": "Invalid configuration",
         "reset_defaults": "Reset to Defaults",
         "cancel": "Cancel",
+        "theme": "Theme",
+        "light_mode": "Light",
+        "dark_mode": "Dark",
+        "new_level": "New Level",
     },
     "ru": {
         "title": "OKR Трекер",
@@ -225,6 +229,10 @@ TRANSLATIONS = {
         "invalid_config": "Неверная конфигурация",
         "reset_defaults": "Сбросить по умолчанию",
         "cancel": "Отмена",
+        "theme": "Тема",
+        "light_mode": "Светлая",
+        "dark_mode": "Тёмная",
+        "new_level": "Новый уровень",
     },
     "uz": {
         "title": "OKR Трекер",
@@ -333,6 +341,10 @@ TRANSLATIONS = {
         "invalid_config": "Нотўғри конфигурация",
         "reset_defaults": "Стандартга қайтариш",
         "cancel": "Бекор қилиш",
+        "theme": "Мавзу",
+        "light_mode": "Ёруғ",
+        "dark_mode": "Қоронғи",
+        "new_level": "Янги даража",
     }
 }
 
@@ -396,7 +408,7 @@ DEFAULT_SCORE_LEVELS_CONFIG = {
     }
 }
 
-THEME = {
+THEME_LIGHT = {
     "sidebar_bg": "#f5f7fa",
     "sidebar_border": "#e1e5eb",
     "main_bg": "#ffffff",
@@ -411,7 +423,62 @@ THEME = {
     "success": "#059669",
     "warning": "#d97706",
     "danger": "#dc2626",
+    "input_bg": "#ffffff",
+    "input_border": "#e4e7ec",
+    "scrollbar_track": "#f1f5f9",
+    "scrollbar_thumb": "#cbd5e1",
+    "scrollbar_hover": "#94a3b8",
+    "gradient_start": "#f8fafc",
+    "gradient_end": "#f1f5f9",
+    "expander_bg": "#f8fafc",
+    "radio_bg": "white",
+    "divider": "#e4e7ec",
+    "stats_card_bg": "linear-gradient(135deg, #e6f0ff 0%, #f0f7ff 100%)",
+    "stats_card_border": "#cce0ff",
+    "stats_card_text": "#0066cc",
+    "stats_card_label": "#4a90d9",
 }
+
+THEME_DARK = {
+    "sidebar_bg": "#1e1e2e",
+    "sidebar_border": "#313244",
+    "main_bg": "#181825",
+    "card_bg": "#1e1e2e",
+    "card_border": "#313244",
+    "card_shadow": "0 4px 12px rgba(0,0,0,0.3)",
+    "text_primary": "#cdd6f4",
+    "text_secondary": "#a6adc8",
+    "accent": "#89b4fa",
+    "accent_light": "#1e1e2e",
+    "header_bg": "linear-gradient(135deg, #1e1e2e 0%, #313244 100%)",
+    "success": "#a6e3a1",
+    "warning": "#f9e2af",
+    "danger": "#f38ba8",
+    "input_bg": "#313244",
+    "input_border": "#45475a",
+    "scrollbar_track": "#1e1e2e",
+    "scrollbar_thumb": "#45475a",
+    "scrollbar_hover": "#585b70",
+    "gradient_start": "#181825",
+    "gradient_end": "#1e1e2e",
+    "expander_bg": "#1e1e2e",
+    "radio_bg": "#313244",
+    "divider": "#313244",
+    "stats_card_bg": "linear-gradient(135deg, #313244 0%, #1e1e2e 100%)",
+    "stats_card_border": "#45475a",
+    "stats_card_text": "#89b4fa",
+    "stats_card_label": "#89b4fa",
+}
+
+
+def get_theme():
+    """Get current theme based on session state"""
+    is_dark = st.session_state.get('dark_mode', False)
+    return THEME_DARK if is_dark else THEME_LIGHT
+
+
+# Keep THEME as a reference that will be updated dynamically
+THEME = THEME_LIGHT
 
 DATA_FILE = "okr_data.json"
 
@@ -763,6 +830,8 @@ def calculate_weighted_department_score(department: dict) -> dict:
 def create_gauge(score: float, compact: bool = False) -> str:
     """Returns HTML string with ECharts gauge using dynamic configuration."""
     import random
+    theme = get_theme()
+    is_dark = st.session_state.get('dark_mode', False)
     config = get_score_levels_config()
     min_score = config['min_score']
     max_score = config['max_score']
@@ -782,6 +851,11 @@ def create_gauge(score: float, compact: bool = False) -> str:
     label_size = 8 if compact else 10
     pointer_width = 6 if compact else 10
     axis_width = 15 if compact else 24
+
+    # Theme-aware colors for gauge
+    pointer_color = '#cdd6f4' if is_dark else '#1a1a2e'
+    label_color = '#a6adc8' if is_dark else '#444'
+    bg_color = theme['card_bg']
 
     # Build dynamic color stops based on configured levels
     # ECharts color format: [position, color] where color applies UP TO that position
@@ -807,12 +881,13 @@ def create_gauge(score: float, compact: bool = False) -> str:
     split_number = 100
 
     html = f'''
-    <div id="{gauge_id}" style="width: 100%; height: {height}px;"></div>
+    <div id="{gauge_id}" style="width: 100%; height: {height}px; background: {bg_color};"></div>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script>
         var chart = echarts.init(document.getElementById('{gauge_id}'));
         var thresholds = [{thresholds_str}];
         var option = {{
+            backgroundColor: '{bg_color}',
             series: [{{
                 type: 'gauge',
                 min: {min_score},
@@ -836,7 +911,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     width: {pointer_width},
                     offsetCenter: [0, '-10%'],
                     itemStyle: {{
-                        color: '#1a1a2e'
+                        color: '{pointer_color}'
                     }}
                 }},
                 axisTick: {{
@@ -847,14 +922,14 @@ def create_gauge(score: float, compact: bool = False) -> str:
                     length: 10,
                     distance: 0,
                     lineStyle: {{
-                        color: '#444',
+                        color: '{label_color}',
                         width: function(index) {{
                             return 0;
                         }}
                     }}
                 }},
                 axisLabel: {{
-                    color: '#444',
+                    color: '{label_color}',
                     fontSize: {label_size},
                     distance: -35,
                     formatter: function (value) {{
@@ -898,6 +973,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
 
 def render_sidebar(departments):
     """Render professional left sidebar with navigation and controls"""
+    theme = get_theme()
     # Calculate overall stats using weighted calculations
     total_objectives = sum(len(d.get('objectives', [])) for d in departments)
     dept_scores = []
@@ -908,17 +984,17 @@ def render_sidebar(departments):
             dept_scores.append(dept_result['score'])
 
     avg_overall = round(sum(dept_scores) / len(dept_scores), 2) if dept_scores else 0
-    overall_level = get_level_for_score(avg_overall) if dept_scores else {"color": THEME['text_secondary']}
+    overall_level = get_level_for_score(avg_overall) if dept_scores else {"color": theme['text_secondary']}
 
     st.markdown(
-        f"<h3 style='font-size:11px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 16px 0; font-weight:600;'> {t('overview')}</h3>",
+        f"<h3 style='font-size:11px; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 16px 0; font-weight:600;'> {t('overview')}</h3>",
         unsafe_allow_html=True)
 
     # Stats cards with gradient backgrounds
     st.markdown(f"""
-        <div style='background:linear-gradient(135deg, #e6f0ff 0%, #f0f7ff 100%); padding:16px; border-radius:10px; margin-bottom:12px; border:1px solid #cce0ff;'>
-            <div style='font-size:32px; font-weight:700; color:#0066cc; line-height:1;'>{total_objectives}</div>
-            <div style='font-size:11px; color:#4a90d9; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('total_objectives')}</div>
+        <div style='background:{theme['stats_card_bg']}; padding:16px; border-radius:10px; margin-bottom:12px; border:1px solid {theme['stats_card_border']};'>
+            <div style='font-size:32px; font-weight:700; color:{theme['stats_card_text']}; line-height:1;'>{total_objectives}</div>
+            <div style='font-size:11px; color:{theme['stats_card_label']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('total_objectives')}</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -941,6 +1017,8 @@ def render_sidebar(departments):
 
 def render_objective_card(objective, dept_idx, obj_idx, compact=True):
     """Render objective - grid view with compact cards OR full view with original detailed display"""
+    theme = get_theme()
+    is_dark = st.session_state.get('dark_mode', False)
     krs = objective.get('key_results', [])
     if not krs:
         st.warning(t("no_krs"))
@@ -959,17 +1037,22 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
         # Use Streamlit container with border for the card
         with st.container(border=True):
             # Header section - build badges section
+            badge_bg = theme['card_bg'] if is_dark else '#f1f5f9'
+            badge_border = theme['card_border'] if is_dark else '#e2e8f0'
             badges_html = f"""<span style='display:inline-block; padding:6px 14px; background:{avg_level['color']}15; color:{avg_level['color']}; border:1px solid {avg_level['color']}30; border-radius:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;'>{get_level_label(avg_level['key'])} • {avg_pct}%</span>
-                        <span style='display:inline-block; padding:6px 14px; background:#f1f5f9; color:{THEME['text_secondary']}; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:600;'>{len(krs)} KRs</span>"""
+                        <span style='display:inline-block; padding:6px 14px; background:{badge_bg}; color:{theme['text_secondary']}; border:1px solid {badge_border}; border-radius:8px; font-size:12px; font-weight:600;'>{len(krs)} KRs</span>"""
 
+            weight_badge_bg = '#fef3c7' if not is_dark else '#463c1a'
+            weight_badge_color = '#d97706' if not is_dark else '#f9e2af'
             if obj_weight > 0:
                 badges_html += f"""
-                        <span style='display:inline-block; padding:5px 12px; background:#fef3c7; color:#d97706; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>"""
+                        <span style='display:inline-block; padding:5px 12px; background:{weight_badge_bg}; color:{weight_badge_color}; border-radius:6px; font-size:11px; font-weight:600;'>{t('weight')}: {obj_weight}%</span>"""
 
+            card_gradient_end = theme['card_bg']
             st.markdown(f"""
-                <div style='background:linear-gradient(180deg, {avg_level['color']}08 0%, #ffffff 100%); padding:16px; margin-bottom:16px; border-bottom:3px solid {avg_level['color']}; border-radius:8px 8px 0 0;'>
+                <div style='background:linear-gradient(180deg, {avg_level['color']}08 0%, {card_gradient_end} 100%); padding:16px; margin-bottom:16px; border-bottom:3px solid {avg_level['color']}; border-radius:8px 8px 0 0;'>
                     <div style='display:flex; justify-content:space-between; align-items:flex-start; gap:12px;'>
-                        <h3 style='margin:0; font-size:16px; color:{THEME['text_primary']}; font-weight:700; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.4;'>📋 {objective['name']}</h3>
+                        <h3 style='margin:0; font-size:16px; color:{theme['text_primary']}; font-weight:700; flex:1; word-wrap:break-word; overflow-wrap:break-word; line-height:1.4;'>📋 {objective['name']}</h3>
                         <div style='background:linear-gradient(135deg, {avg_level['color']} 0%, {avg_level['color']}dd 100%); color:white; padding:8px 16px; border-radius:20px; font-size:15px; font-weight:700; white-space:nowrap; flex-shrink:0; box-shadow:0 3px 10px {avg_level['color']}50;'>{avg_score:.2f}</div>
                     </div>
                     <div style='margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;'>
@@ -1080,13 +1163,17 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
     else:
         # FULL VIEW - Original detailed display with all tables and functionality wrapped in frame
         obj_weight = objective.get('weight') or 0  # handles None values
-        weight_badge = f"<span style='background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:12px; font-weight:600; font-size:12px; margin-left:8px;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
+        weight_badge_bg = '#fef3c7' if not is_dark else '#463c1a'
+        weight_badge_color = '#d97706' if not is_dark else '#f9e2af'
+        weight_badge = f"<span style='background:{weight_badge_bg}; color:{weight_badge_color}; padding:4px 10px; border-radius:12px; font-weight:600; font-size:12px; margin-left:8px;'>{t('weight')}: {obj_weight}%</span>" if obj_weight > 0 else ""
 
         st.markdown(
-            f"<div style='background:{THEME['card_bg']}; border:none; border-radius:10px; padding:0; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.1); overflow:hidden;'>",
+            f"<div style='background:{theme['card_bg']}; border:none; border-radius:10px; padding:0; margin-bottom:20px; box-shadow:{theme['card_shadow']}; overflow:hidden;'>",
             unsafe_allow_html=True)
+        header_bg = '#FFC000' if not is_dark else '#8b6914'
+        header_text = '#000000' if not is_dark else '#ffffff'
         st.markdown(
-            f"<div style='background:#FFC000; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px;'>📋 {objective['name']}{weight_badge}</span><span style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('weighted_score')}: {avg_score:.2f}</span></div>",
+            f"<div style='background:{header_bg}; padding:8px 12px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;'><span style='font-weight:bold; font-size:14px; color:{header_text};'>📋 {objective['name']}{weight_badge}</span><span style='background:{avg_level['color']}; color:white; padding:4px 12px; border-radius:15px; font-weight:bold; font-size:14px;'>{t('weighted_score')}: {avg_score:.2f}</span></div>",
             unsafe_allow_html=True)
 
         with st.expander(f"{objective['name']}", expanded=False):
@@ -2117,215 +2204,260 @@ def import_from_excel(file_content):
 
 
 def inject_global_css():
-    """Inject custom CSS for professional enterprise appearance"""
-    st.markdown("""
+    """Inject custom CSS for professional enterprise appearance with theme support"""
+    theme = get_theme()
+    is_dark = st.session_state.get('dark_mode', False)
+
+    st.markdown(f"""
     <style>
     /* Import professional fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
     /* Global font and background */
-    html, body, [class*="css"] {
+    html, body, [class*="css"] {{
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
+    }}
 
-    .main {
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-    }
-    ß
+    .main {{
+        background: linear-gradient(180deg, {theme['gradient_start']} 0%, {theme['gradient_end']} 100%);
+    }}
 
     /* ===== AGGRESSIVE TOP SPACE REMOVAL ===== */
     /* Remove default Streamlit padding */
-    .main .block-container {
+    .main .block-container {{
         padding-top: 0 !important;
         padding-bottom: 0rem;
         padding-left: 1.5rem;
         padding-right: 1.5rem;
         max-width: 100%;
-    }
+    }}
 
     /* Target the root app container */
-    .stApp {
+    .stApp {{
         margin-top: -80px !important;
-    }
+        background: {theme['main_bg']};
+    }}
 
     /* Alternative: use negative margin on main content */
-    [data-testid="stAppViewContainer"] {
+    [data-testid="stAppViewContainer"] {{
         margin-top: 0 !important;
         padding-top: 0 !important;
-    }
+        background: {theme['main_bg']};
+    }}
 
-    [data-testid="stAppViewContainer"] > .main {
+    [data-testid="stAppViewContainer"] > .main {{
         padding-top: 0 !important;
-    }
+    }}
 
     /* Hide Streamlit branding and COMPLETELY remove header space */
-    #MainMenu {display: none !important;}
-    footer {display: none !important;}
-    header {display: none !important; height: 0 !important;}
+    #MainMenu {{display: none !important;}}
+    footer {{display: none !important;}}
+    header {{display: none !important; height: 0 !important;}}
 
     /* Remove header element completely */
-    [data-testid="stHeader"] {
+    [data-testid="stHeader"] {{
         display: none !important;
         height: 0 !important;
-    }
+    }}
 
-    .stApp > header {
+    .stApp > header {{
         display: none !important;
         height: 0 !important;
-    }
+    }}
 
     /* Remove any top decoration/toolbar */
-    [data-testid="stToolbar"] {
+    [data-testid="stToolbar"] {{
         display: none !important;
-    }
+    }}
 
     /* Remove deploy button area */
-    [data-testid="stDecoration"] {
+    [data-testid="stDecoration"] {{
         display: none !important;
-    }
+    }}
 
     /* Remove top bar/status bar */
-    [data-testid="stStatusWidget"] {
+    [data-testid="stStatusWidget"] {{
         display: none !important;
-    }
+    }}
 
     /* Ensure no top margin on first element */
-    .element-container:first-child {
+    .element-container:first-child {{
         margin-top: 0 !important;
-    }
+    }}
 
     /* Target iframe container if embedded */
-    .stApp iframe {
+    .stApp iframe {{
         margin-top: 0 !important;
-    }
+    }}
     /* ===== END TOP SPACE REMOVAL ===== */
 
     /* Professional buttons */
-    .stButton>button {
+    .stButton>button {{
         font-family: 'Inter', sans-serif;
         font-weight: 500;
         border-radius: 8px;
-        border: 1px solid #e4e7ec;
+        border: 1px solid {theme['card_border']};
+        background: {theme['card_bg']};
+        color: {theme['text_primary']};
         transition: all 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
+        box-shadow: {theme['card_shadow']};
+    }}
 
-    .stButton>button:hover {
+    .stButton>button:hover {{
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
+    }}
 
-    .stButton>button[kind="primary"] {
-        background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+    .stButton>button[kind="primary"] {{
+        background: linear-gradient(135deg, {theme['accent']} 0%, {'#0052a3' if not is_dark else '#6b9fd8'} 100%);
         border: none;
-        color: white;
-    }
+        color: {'white' if not is_dark else '#1e1e2e'};
+    }}
 
     /* Download button styling */
-    .stDownloadButton>button {
+    .stDownloadButton>button {{
         font-family: 'Inter', sans-serif;
         font-weight: 500;
         border-radius: 8px;
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        background: linear-gradient(135deg, {theme['success']} 0%, {'#047857' if not is_dark else '#7dd3a0'} 100%);
         border: none;
-        color: white;
+        color: {'white' if not is_dark else '#1e1e2e'};
         transition: all 0.2s ease;
-    }
+    }}
 
-    .stDownloadButton>button:hover {
+    .stDownloadButton>button:hover {{
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
-    }
+    }}
 
     /* Expander styling */
-    .streamlit-expanderHeader {
+    .streamlit-expanderHeader {{
         font-family: 'Inter', sans-serif;
         font-weight: 600;
-        background: #f8fafc;
+        background: {theme['expander_bg']};
         border-radius: 8px;
         padding: 0.75rem 1rem;
-        border: 1px solid #e4e7ec;
-    }
+        border: 1px solid {theme['card_border']};
+        color: {theme['text_primary']};
+    }}
 
-    .streamlit-expanderContent {
-        border: 1px solid #e4e7ec;
+    .streamlit-expanderContent {{
+        border: 1px solid {theme['card_border']};
         border-top: none;
         border-radius: 0 0 8px 8px;
-        background: white;
-    }
+        background: {theme['card_bg']};
+    }}
 
     /* Input fields */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {{
         font-family: 'Inter', sans-serif;
         border-radius: 8px;
-        border: 1px solid #e4e7ec;
-    }
+        border: 1px solid {theme['input_border']};
+        background: {theme['input_bg']};
+        color: {theme['text_primary']};
+    }}
 
-    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
-        border-color: #0066cc;
-        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-    }
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {{
+        border-color: {theme['accent']};
+        box-shadow: 0 0 0 3px {theme['accent']}20;
+    }}
 
     /* Radio buttons */
-    .stRadio>div {
-        background: white;
+    .stRadio>div {{
+        background: {theme['radio_bg']};
         padding: 0.5rem;
         border-radius: 8px;
-        border: 1px solid #e4e7ec;
-    }
+        border: 1px solid {theme['card_border']};
+    }}
+
+    .stRadio label {{
+        color: {theme['text_primary']} !important;
+    }}
 
     /* Metrics and stats cards */
-    [data-testid="stMetricValue"] {
+    [data-testid="stMetricValue"] {{
         font-family: 'Inter', sans-serif;
         font-weight: 700;
-    }
+        color: {theme['text_primary']};
+    }}
 
     /* Custom scrollbar */
-    ::-webkit-scrollbar {
+    ::-webkit-scrollbar {{
         width: 8px;
         height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #f1f5f9;
+    }}
+    ::-webkit-scrollbar-track {{
+        background: {theme['scrollbar_track']};
         border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+    }}
+    ::-webkit-scrollbar-thumb {{
+        background: {theme['scrollbar_thumb']};
         border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
+    }}
+    ::-webkit-scrollbar-thumb:hover {{
+        background: {theme['scrollbar_hover']};
+    }}
 
     /* Divider styling */
-    hr {
+    hr {{
         border: none;
         height: 1px;
-        background: linear-gradient(90deg, transparent, #e4e7ec, transparent);
+        background: linear-gradient(90deg, transparent, {theme['divider']}, transparent);
         margin: 1rem 0;
-    }
+    }}
 
     /* ===== STICKY SIDEBAR ===== */
     /* Make the sidebar column sticky */
-    [data-testid="stHorizontalBlock"] > div:first-child {
+    [data-testid="stHorizontalBlock"] > div:first-child {{
         position: sticky;
         top: 0;
         align-self: flex-start;
         max-height: 100vh;
         overflow-y: auto;
-    }
+    }}
 
     /* Ensure proper scrolling behavior */
-    [data-testid="stHorizontalBlock"] {
+    [data-testid="stHorizontalBlock"] {{
         align-items: flex-start !important;
-    }
+    }}
     /* ===== END STICKY SIDEBAR ===== */
 
     /* Alert/warning styling */
-    .stAlert {
+    .stAlert {{
         border-radius: 8px;
         border: none;
-    }
+    }}
+
+    /* Streamlit container styling for dark mode */
+    [data-testid="stVerticalBlock"] {{
+        color: {theme['text_primary']};
+    }}
+
+    /* Label styling */
+    .stSelectbox label, .stTextInput label, .stNumberInput label {{
+        color: {theme['text_secondary']} !important;
+    }}
+
+    /* Checkbox and text styling */
+    p, span, div {{
+        color: {theme['text_primary']};
+    }}
+
+    /* Container borders */
+    [data-testid="stVerticalBlockBorderWrapper"] {{
+        background: {theme['card_bg']};
+        border-color: {theme['card_border']} !important;
+    }}
+
+    /* Data editor styling */
+    .stDataFrame {{
+        background: {theme['card_bg']};
+    }}
+
+    /* Table styling */
+    .stDataFrame table {{
+        color: {theme['text_primary']};
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -2365,9 +2497,12 @@ def score_levels_settings_dialog():
         with st.container(border=True):
             lc1, lc2, lc3, lc4 = st.columns([2.5, 1.5, 1, 0.5])
             with lc1:
+                # Get the current name for the active language
+                current_lang = st.session_state.get('language', 'en')
+                current_name = level['names'].get(current_lang, level['names'].get('en', ''))
                 new_name = st.text_input(
-                    f"{t('level_name')} (EN)",
-                    value=level['names'].get('en', ''),
+                    t('level_name'),
+                    value=current_name,
                     key=f"dlg_lvl_name_{level['key']}"
                 )
             with lc2:
@@ -2398,6 +2533,8 @@ def score_levels_settings_dialog():
                             lvl['order'] = i
                         st.rerun()
 
+            # Update all language names when the user changes the name
+            # This ensures custom level names display correctly in all languages
             levels_to_update.append({
                 "key": level['key'],
                 "order": idx,
@@ -2405,8 +2542,8 @@ def score_levels_settings_dialog():
                 "color": new_color,
                 "names": {
                     "en": new_name,
-                    "ru": level['names'].get('ru', new_name),
-                    "uz": level['names'].get('uz', new_name)
+                    "ru": new_name,
+                    "uz": new_name
                 }
             })
 
@@ -2419,12 +2556,14 @@ def score_levels_settings_dialog():
             new_key_num += 1
         new_key = f"level_{new_key_num}"
 
+        # Use translated "New Level" for new levels - same name for all languages
+        new_level_name = t('new_level')
         new_level = {
             "key": new_key,
             "order": len(settings_config['levels']),
             "threshold": round((new_min + new_max) / 2, 2),
             "color": "#808080",
-            "names": {"en": "New Level", "ru": "Новый уровень", "uz": "Yangi daraja"}
+            "names": {"en": new_level_name, "ru": new_level_name, "uz": new_level_name}
         }
         st.session_state.dialog_levels_config['levels'].append(new_level)
         st.rerun()
@@ -2510,6 +2649,11 @@ def score_levels_settings_dialog():
 
 def main():
     st.set_page_config(page_title="OKR Tracker", page_icon="🎯", layout="wide")
+
+    # Initialize dark mode before CSS injection
+    if 'dark_mode' not in st.session_state:
+        st.session_state.dark_mode = False
+
     inject_global_css()
 
     # Initialize
@@ -2521,8 +2665,15 @@ def main():
         st.session_state.new_krs = []
         st.session_state.initialized = True
 
-    # Language selector aligned to the right
-    col_lang = st.columns([5, 1])[1]
+    # Theme and Language selectors aligned to the right
+    col_spacer, col_theme, col_lang = st.columns([4, 0.5, 1])
+    with col_theme:
+        theme = get_theme()
+        is_dark = st.session_state.get('dark_mode', False)
+        theme_icon = "🌙" if not is_dark else "☀️"
+        if st.button(theme_icon, key="theme_toggle", help=t('dark_mode') if not is_dark else t('light_mode')):
+            st.session_state.dark_mode = not st.session_state.dark_mode
+            st.rerun()
     with col_lang:
         lang_options = {"en": "🇬🇧 EN", "ru": "🇷🇺 RU", "uz": "🇺🇿 UZ"}
         selected_lang = st.selectbox("Language", list(lang_options.keys()),
@@ -2554,6 +2705,9 @@ def main():
         # Sidebar is visible, use two-column layout
         col_sidebar, col_main = st.columns([0.22, 0.78], gap="medium")
 
+    # Get theme for use in main layout
+    theme = get_theme()
+
     if not st.session_state.sidebar_collapsed:
         with col_sidebar:
             # === SIDEBAR ===
@@ -2561,7 +2715,7 @@ def main():
 
             # Department navigation with dropdown/combo box
             st.markdown(
-                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>🏢 {t('departments')}</h3>",
+                f"<h3 style='font-size:14px; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>🏢 {t('departments')}</h3>",
                 unsafe_allow_html=True)
 
             if 'selected_dept_filter' not in st.session_state:
@@ -2584,7 +2738,7 @@ def main():
 
             # View mode switcher
             st.markdown(
-                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'> {t('view_mode')}</h3>",
+                f"<h3 style='font-size:14px; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'> {t('view_mode')}</h3>",
                 unsafe_allow_html=True)
             view_mode = st.radio(
                 "View",
@@ -2598,7 +2752,7 @@ def main():
 
             # Action buttons
             st.markdown(
-                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>⚙️ {t('actions')}</h3>",
+                f"<h3 style='font-size:14px; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>⚙️ {t('actions')}</h3>",
                 unsafe_allow_html=True)
 
             if st.button("💾 " + t("save_data"), use_container_width=True, type="primary"):
@@ -2645,7 +2799,7 @@ def main():
 
             # ===== SCORE LEVEL SETTINGS =====
             st.markdown(
-                f"<h3 style='font-size:14px; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>⚙️ {t('score_level_settings')}</h3>",
+                f"<h3 style='font-size:14px; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1px; margin:25px 0 12px 0;'>⚙️ {t('score_level_settings')}</h3>",
                 unsafe_allow_html=True)
 
             if st.button(f"⚙️ {t('configure_score_levels')}", use_container_width=True):
@@ -2660,7 +2814,7 @@ def main():
         levels_dict = get_levels_dict()
 
         st.markdown(f"""
-            <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{THEME['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'> {t('performance_scale')}</p>
+            <p style='font-size:12px; font-weight:600; margin:0 0 12px 0; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1px;'> {t('performance_scale')}</p>
         """, unsafe_allow_html=True)
 
         cols = st.columns(len(sorted_levels))
@@ -2842,7 +2996,7 @@ def main():
 
                 # Department header
                 st.markdown(
-                    f"<div style='margin:20px 0 15px 0; padding-bottom:8px; border-bottom:2px solid {THEME['card_border']};'><h2 style='margin:0; font-size:20px; color:{THEME['text_primary']}; font-weight:600;'>📁 {department['name']}</h2></div>",
+                    f"<div style='margin:20px 0 15px 0; padding-bottom:8px; border-bottom:2px solid {theme['card_border']};'><h2 style='margin:0; font-size:20px; color:{theme['text_primary']}; font-weight:600;'>📁 {department['name']}</h2></div>",
                     unsafe_allow_html=True)
 
                 objectives = department.get('objectives', [])
