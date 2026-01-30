@@ -23,7 +23,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 85.0
+              "actual": 120.0
             },
             {
               "id": "2223ea5d-0096-4731-925f-ee15fc00e4c1",
@@ -353,7 +353,7 @@
       ]
     }
   ],
-  "language": "uz",
+  "language": "en",
   "score_levels_config": {
     "min_score": 0.0,
     "max_score": 1.0,

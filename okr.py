@@ -1246,16 +1246,26 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                 # Use all configured levels for display
                 display_levels = sorted_config_levels
 
+                # Theme-aware table colors
+                table_header_bg = '#3d5a80' if is_dark else '#4472C4'
+                table_border = '#3d3d5c' if is_dark else '#2F5496'
+                table_text = '#cdd6f4' if is_dark else 'white'
+                weight_cell_bg = '#3d3414' if is_dark else '#FFF2CC'
+                fact_cell_bg = '#1a3d2a' if is_dark else '#E2EFDA'
+
                 # Build dynamic header for levels
                 level_headers = ""
                 for lvl in display_levels:
                     text_color = "#000" if lvl['key'] == 'meets' else "white"
-                    level_headers += f"<th style='padding:6px; border:1px solid #2F5496; background:{lvl['color']}; color:{text_color}; font-size:10px;'>{get_level_label(lvl['key'])}<br><small style='font-size:9px;'>{lvl['threshold']:.2f}</small></th>"
+                    level_headers += f"<th style='padding:6px; border:1px solid {table_border}; background:{lvl['color']}; color:{text_color}; font-size:10px;'>{get_level_label(lvl['key'])}<br><small style='font-size:9px;'>{lvl['threshold']:.2f}</small></th>"
 
                 num_level_cols = len(display_levels)
                 total_cols = 4 + num_level_cols + 1  # KR, name, weight, fact + level cols + result
-
-                html_table = f"<table style='width:100%; border-collapse:collapse; font-size:11px; margin-top:5px;'><thead><tr style='background:#4472C4; color:white;'><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('fact')}</th>{level_headers}<th style='padding:6px; border:1px solid #2F5496; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
+                formula_row_bg = '#3d3414' if is_dark else '#FFF2CC'
+                formula_border = '#6b5a00' if is_dark else '#BF9000'
+                cell_border = '#3d3d5c' if is_dark else '#ddd'
+                table_bg = '#1e1e2e' if is_dark else '#ffffff'
+                html_table = f"<html><head><style>html, body {{ margin:0; padding:0; background:{table_bg}; }}</style></head><body><div style='background:{table_bg}; padding:5px;'><table style='width:100%; border-collapse:collapse; font-size:11px; background:{table_bg};'><thead><tr style='background:{table_header_bg}; color:{table_text};'><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>KR</th><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('key_result')}</th><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('weight')}</th><th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('fact')}</th>{level_headers}<th style='padding:6px; border:1px solid {table_border}; font-size:11px;'>{t('result')}</th></tr></thead><tbody>"
 
                 for kr_idx, kr in enumerate(krs):
                     result = results[kr_idx]
@@ -1292,7 +1302,7 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                             else:
                                 th_texts[lvl['key']] = f"≤{th.get(lvl['key'], 0)}"
 
-                    row_bg = '#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF'
+                    row_bg = ('#2a2a3e' if kr_idx % 2 == 0 else '#1e1e2e') if is_dark else ('#F8F9FA' if kr_idx % 2 == 0 else '#FFFFFF')
                     kr_desc = kr.get('description', '') or kr['name']
                     kr_desc_escaped = kr_desc.replace('"', '&quot;').replace("'", "&#39;")
 
@@ -1309,9 +1319,9 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     # Build level cells dynamically
                     level_cells = ""
                     for lvl in display_levels:
-                        level_cells += f"<td style='padding:5px; border:1px solid #ddd; {cells[lvl['key']]} font-size:11px;'>{th_texts[lvl['key']]}</td>"
+                        level_cells += f"<td style='padding:5px; border:1px solid {cell_border}; {cells[lvl['key']]} font-size:11px;'>{th_texts[lvl['key']]}</td>"
 
-                    html_table += f"<tr style='background:{row_bg};'><td style='padding:5px; border:1px solid #ddd; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid #ddd; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid #ddd; background:#FFF2CC; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid #ddd; background:#E2EFDA; font-weight:bold; font-size:11px;'>{actual_display}</td>{level_cells}<td style='padding:5px; border:1px solid #ddd; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
+                    html_table += f"<tr style='background:{row_bg}; color:{table_text};'><td style='padding:5px; border:1px solid {cell_border}; font-weight:bold; font-size:11px;'>KR{kr_idx + 1}</td><td style='padding:5px; border:1px solid {cell_border}; text-align:left; font-size:11px;' title=\"{kr_desc_escaped}\"><span style='cursor:help; border-bottom:1px dotted #7f8c8d;'>{kr['name']}</span></td><td style='padding:5px; border:1px solid {cell_border}; background:{weight_cell_bg}; font-weight:bold; font-size:11px;'>{kr_weight}%</td><td style='padding:5px; border:1px solid {cell_border}; background:{fact_cell_bg}; font-weight:bold; font-size:11px;'>{actual_display}</td>{level_cells}<td style='padding:5px; border:1px solid {cell_border}; background:{result['level_info']['color']}; color:white; font-weight:bold; font-size:11px;'>{score_display}</td></tr>"
 
                 # Weighted Calculation Row - matches Java frontend format
                 if obj_result.get('total_weight', 0) > 0:
@@ -1331,13 +1341,13 @@ def render_objective_card(objective, dept_idx, obj_idx, compact=True):
                     # Show normalization if weights don't sum to 100
                     total_weight = sum((kr.get('weight', 0) or 0) for kr in krs)
                     if total_weight != 100 and total_weight > 0:
-                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                        html_table += f"<tr style='background:{formula_row_bg}; color:{table_text}; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = {weighted_contributions:.2f} / {total_weight}% = </td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
                     else:
-                        html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                        html_table += f"<tr style='background:{formula_row_bg}; color:{table_text}; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; text-align:right; font-size:11px;'><span style='font-weight:bold;'>OKR =</span> {formula_str} = </td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
                 else:
                     # Fallback to simple average formula (no weights)
                     kr_formula = " + ".join([f"KR{i + 1}" for i in range(len(krs))])
-                    html_table += f"<tr style='background:#FFF2CC; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid #BF9000; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid #BF9000; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table>"
+                    html_table += f"<tr style='background:{formula_row_bg}; color:{table_text}; font-weight:bold;'><td colspan='{total_cols - 1}' style='padding:8px; border:2px solid {formula_border}; text-align:right; font-size:11px;'>({kr_formula}) / {len(krs)} =</td><td style='padding:8px; border:2px solid {formula_border}; background:{avg_level['color']}; color:white; font-size:14px;'>{avg_score:.2f}</td></tr></tbody></table></div></body></html>"
 
                 table_height = 70 + (len(krs) * 48) + 60
                 components.html(html_table, height=table_height, scrolling=False)
