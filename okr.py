@@ -91,6 +91,8 @@ TRANSLATIONS = {
         "grade_e": "E - Below",
         "weighted_score": "Weighted Score",
         "dept_weighted_avg": "Dept. Weighted Average",
+        "objective_weighted_score": "OBJECTIVE WEIGHTED SCORE",
+        "department_weighted_score": "DEPARTMENT WEIGHTED SCORE",
         "weighted_formula": "Weighted Formula",
         "kr_contribution": "KR Contribution",
         "obj_contribution": "Objective Contribution",
@@ -204,6 +206,8 @@ TRANSLATIONS = {
         "grade_e": "E - Ниже",
         "weighted_score": "Взвешенная оценка",
         "dept_weighted_avg": "Взвеш. среднее отдела",
+        "objective_weighted_score": "ВЗВЕШЕННАЯ ОЦЕНКА ЦЕЛИ",
+        "department_weighted_score": "ВЗВЕШЕННАЯ ОЦЕНКА ОТДЕЛА",
         "weighted_formula": "Взвешенная формула",
         "kr_contribution": "Вклад KR",
         "obj_contribution": "Вклад цели",
@@ -251,9 +255,9 @@ TRANSLATIONS = {
         "kr_description": "Тавсиф (кўрсатма)",
         "kr_description_placeholder": "KR маъносини киритинг...",
         "type": "Тури",
-        "higher_better": "↑",
-        "lower_better": "↓",
-        "qualitative": " Сифат (A/B/C/D/E)",
+        "higher_better": "↑ Кўп яхши",
+        "lower_better": "↓ Кам яхши",
+        "qualitative": "⭐ Сифат (A/B/C/D/E)",
         "unit": "Бирлик",
         "thresholds": "Чегаралар",
         "add_kr": "➕ KR Қўшиш",
@@ -316,6 +320,8 @@ TRANSLATIONS = {
         "grade_e": "E - Ёмон",
         "weighted_score": "Вазнли баҳо",
         "dept_weighted_avg": "Бўлим вазнли ўртача",
+        "objective_weighted_score": "МАҚСАД ВАЗНЛИ БАҲОСИ",
+        "department_weighted_score": "БЎЛИМ ВАЗНЛИ БАҲОСИ",
         "weighted_formula": "Вазнли формула",
         "kr_contribution": "KR ҳиссаси",
         "obj_contribution": "Мақсад ҳиссаси",
@@ -564,11 +570,11 @@ def get_levels_dict() -> dict:
     result = {}
 
     for i, level in enumerate(levels):
-        # Calculate max as threshold of next level minus 0.01, or same as threshold for last level
+        # Calculate max as threshold of next level minus 0.01, or max_score for last level
         if i < len(levels) - 1:
             max_val = round(levels[i + 1]['threshold'] - 0.01, 2)
         else:
-            max_val = level['threshold']
+            max_val = config.get('max_score', 1.0)
 
         result[level['key']] = {
             "min": level['threshold'],
@@ -1777,7 +1783,7 @@ def _create_performance_level_formula(row: int, num_levels: int = 4) -> str:
     return f'={formula}'
 
 
-def _apply_conditional_formatting(ws, max_row: int, colors: dict, num_levels: int = 4):
+def _apply_conditional_formatting(ws, max_row: int, colors: dict, num_levels: int = 4, summary_rows: list = None):
     """Apply conditional formatting to score and performance level columns - using dynamic config."""
     from openpyxl.formatting.rule import Rule
     from openpyxl.styles.differential import DifferentialStyle
@@ -1785,6 +1791,9 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict, num_levels: in
     # Skip if no data rows (max_row must be at least 3 to have row 2 as data)
     if max_row < 3:
         return
+
+    if summary_rows is None:
+        summary_rows = []
 
     config = get_score_levels_config()
     sorted_levels = sorted(config['levels'], key=lambda x: x['threshold'], reverse=True)
@@ -1842,6 +1851,32 @@ def _apply_conditional_formatting(ws, max_row: int, colors: dict, num_levels: in
         lrule.priority = priority
         ws.conditional_formatting.add(level_range, lrule)
 
+    # Apply conditional formatting to entire summary rows (columns 1 through level_col)
+    # This ensures the entire row changes color when the score changes
+    for summary_row in summary_rows:
+        summary_range = f'A{summary_row}:{level_col}{summary_row}'
+
+        for priority, lvl in enumerate(sorted_levels, start=1):
+            color_hex = lvl['color'].lstrip('#')
+            fill = PatternFill(start_color=color_hex, end_color=color_hex, fill_type='solid')
+            threshold = lvl['threshold']
+
+            # Rule based on the score column value in this row
+            if priority == 1:
+                row_rule = Rule(type='expression',
+                               formula=[f'${score_col}{summary_row}>={threshold}'],
+                               stopIfTrue=True,
+                               dxf=DifferentialStyle(fill=fill, font=white_font))
+            else:
+                prev_lvl = sorted_levels[priority - 2]
+                row_rule = Rule(type='expression',
+                               formula=[f'AND(${score_col}{summary_row}>={threshold},${score_col}{summary_row}<{prev_lvl["threshold"]})'],
+                               stopIfTrue=True,
+                               dxf=DifferentialStyle(fill=fill, font=white_font))
+
+            row_rule.priority = priority
+            ws.conditional_formatting.add(summary_range, row_rule)
+
 
 def export_to_excel(departments):
     """Export OKR data to Excel with interactive formulas for automatic recalculation"""
@@ -1892,6 +1927,7 @@ def export_to_excel(departments):
 
     # Add data
     row_idx = 2
+    summary_rows = []  # Track summary row numbers for conditional formatting
     for dept in departments:
         dept_name = dept['name']
         dept_start_row = row_idx  # Track starting row for this department
@@ -1910,13 +1946,13 @@ def export_to_excel(departments):
 
                 # Determine metric type display
                 if kr['metric_type'] == 'qualitative':
-                    type_display = 'Qualitative (A-E)'
+                    type_display = t('qualitative')
                     actual_display = kr.get('actual', 'E')
                 elif kr['metric_type'] == 'higher_better':
-                    type_display = '↑ Higher Better'
+                    type_display = t('higher_better')
                     actual_display = kr['actual']
                 else:
-                    type_display = '↓ Lower Better'
+                    type_display = t('lower_better')
                     actual_display = kr['actual']
 
                 # Write data (department only in first row of dept, objective only in first row of obj)
@@ -2008,21 +2044,21 @@ def export_to_excel(departments):
                 obj_weight_summary = ws.cell(row=row_idx, column=3, value=obj_weight)
                 obj_weight_summary.number_format = '0"%"'
 
-                # Label for summary
-                summary_label_cell = ws.cell(row=row_idx, column=4, value="📊 OBJECTIVE WEIGHTED SCORE")
-                summary_label_cell.fill = summary_fill
+                # Label for summary - no static fill, conditional formatting will color it
+                summary_label_cell = ws.cell(row=row_idx, column=4, value=f"📊 {t('objective_weighted_score')}")
                 summary_label_cell.font = summary_font
                 summary_label_cell.alignment = Alignment(horizontal='right', vertical='center')
 
-                # Empty cells for KR weight, type, actual, unit - all with performance level color
+                # Empty cells for KR weight, type, actual, unit - no static fill
                 for col in [5, 6, 7, 8]:
                     cell = ws.cell(row=row_idx, column=col, value='')
-                    cell.fill = summary_fill
 
-                # Empty threshold columns - all with performance level color
+                # Empty threshold columns - no static fill
                 for i in range(num_levels):
                     cell = ws.cell(row=row_idx, column=THRESHOLD_START_COL + i, value='')
-                    cell.fill = summary_fill
+
+                # Track this as a summary row for conditional formatting
+                summary_rows.append(row_idx)
 
                 # Create weighted average formula for objective score
                 # Formula: =IF(SUM(weights)>0, SUMPRODUCT(scores,weights)/SUM(weights), AVERAGE(scores))
@@ -2043,18 +2079,17 @@ def export_to_excel(departments):
                 obj_score_cell = ws.cell(row=row_idx, column=SCORE_COL, value=obj_score_formula)
                 obj_score_cell.number_format = '0.00'
                 obj_score_cell.alignment = summary_alignment
-                obj_score_cell.fill = summary_fill
-                obj_score_cell.font = summary_font
+                # Don't apply static fill - let conditional formatting handle dynamic coloring
+                obj_score_cell.font = Font(bold=True, color='FFFFFF')
 
                 # Performance level formula for objective
                 obj_perf_formula = _create_performance_level_formula(row_idx, num_levels)
                 obj_level_cell = ws.cell(row=row_idx, column=LEVEL_COL, value=obj_perf_formula)
-                obj_level_cell.fill = summary_fill
-                obj_level_cell.font = summary_font
+                # Don't apply static fill - let conditional formatting handle dynamic coloring
+                obj_level_cell.font = Font(bold=True, color='FFFFFF')
                 obj_level_cell.alignment = summary_alignment
 
-                # Style the objective weight cell in summary row - same color as row
-                obj_weight_summary.fill = summary_fill
+                # Style the objective weight cell in summary row - no static fill
                 obj_weight_summary.font = summary_font
                 obj_weight_summary.alignment = summary_alignment
 
@@ -2084,8 +2119,101 @@ def export_to_excel(departments):
                     bottom=thick_bottom
                 )
 
-        # Merge department cells across ALL objectives in this department
-        dept_end_row = row_idx - 1
+        # Add Department Summary Row with weighted average formula
+        objectives_with_scores = [obj for obj in dept.get('objectives', []) if obj.get('key_results')]
+        if objectives_with_scores:
+            # Calculate department score using Python for initial coloring
+            dept_result = calculate_weighted_department_score(dept)
+            dept_score = dept_result['score']
+            dept_level_info = get_level_for_score(dept_score)
+
+            # Get performance level color for the entire summary row
+            dept_color = colors.get(dept_level_info['key'], '1e40af')
+            dept_summary_fill = PatternFill(start_color=dept_color, end_color=dept_color, fill_type='solid')
+            dept_summary_font = Font(bold=True, color='FFFFFF', size=12)
+            dept_summary_alignment = Alignment(horizontal='center', vertical='center')
+
+            # Write department summary row
+            ws.cell(row=row_idx, column=1, value=dept_name)
+            ws.cell(row=row_idx, column=2, value='')
+            ws.cell(row=row_idx, column=3, value='')
+
+            # Label for department summary - no static fill, conditional formatting will color it
+            dept_summary_label = ws.cell(row=row_idx, column=4, value=f"🏢 {t('department_weighted_score')}")
+            dept_summary_label.font = dept_summary_font
+            dept_summary_label.alignment = Alignment(horizontal='right', vertical='center')
+
+            # Empty cells for columns 5-8 - no static fill
+            for col in [5, 6, 7, 8]:
+                cell = ws.cell(row=row_idx, column=col, value='')
+
+            # Empty threshold columns - no static fill
+            for i in range(num_levels):
+                cell = ws.cell(row=row_idx, column=THRESHOLD_START_COL + i, value='')
+
+            # Track this as a summary row for conditional formatting
+            summary_rows.append(row_idx)
+
+            # Create weighted average formula for department score
+            # We need to find all objective summary rows for this department
+            # Build formula that references objective scores and weights
+            obj_score_refs = []
+            obj_weight_refs = []
+            score_col_letter = chr(ord('A') + SCORE_COL - 1)
+
+            # Find objective summary rows (they have the 📊 emoji marker)
+            current_row = dept_start_row
+            while current_row < row_idx:
+                cell_val = ws.cell(row=current_row, column=4).value
+                if cell_val and '📊' in str(cell_val):
+                    obj_score_refs.append(f"{score_col_letter}{current_row}")
+                    obj_weight_refs.append(f"C{current_row}")
+                current_row += 1
+
+            if obj_score_refs:
+                # Create SUMPRODUCT formula for weighted department score
+                scores_list = ",".join(obj_score_refs)
+                weights_list = ",".join(obj_weight_refs)
+                dept_score_formula = (
+                    f'=IF(SUM({weights_list})>0,'
+                    f'SUMPRODUCT({scores_list},{weights_list})/SUM({weights_list}),'
+                    f'AVERAGE({scores_list}))'
+                )
+            else:
+                dept_score_formula = dept_score
+
+            dept_score_cell = ws.cell(row=row_idx, column=SCORE_COL, value=dept_score_formula)
+            dept_score_cell.number_format = '0.00'
+            dept_score_cell.alignment = dept_summary_alignment
+            # Don't apply static fill - let conditional formatting handle dynamic coloring
+            dept_score_cell.font = Font(bold=True, color='FFFFFF')
+
+            # Performance level formula for department
+            dept_perf_formula = _create_performance_level_formula(row_idx, num_levels)
+            dept_level_cell = ws.cell(row=row_idx, column=LEVEL_COL, value=dept_perf_formula)
+            # Don't apply static fill - let conditional formatting handle dynamic coloring
+            dept_level_cell.font = Font(bold=True, color='FFFFFF')
+            dept_level_cell.alignment = dept_summary_alignment
+
+            # Style the department name cell in summary row - no static fill
+            dept_name_cell = ws.cell(row=row_idx, column=1)
+            dept_name_cell.font = dept_summary_font
+            dept_name_cell.alignment = dept_summary_alignment
+
+            # Style empty cells in columns 2-3 - no static fill
+            for col in [2, 3]:
+                ws.cell(row=row_idx, column=col)
+
+            # Add thick border after department summary
+            very_thick_bottom = Side(style='thick', color='000000')
+            for col in range(1, TOTAL_COLS + 1):
+                cell = ws.cell(row=row_idx, column=col)
+                cell.border = Border(bottom=very_thick_bottom)
+
+            row_idx += 1
+
+        # Merge department cells across ALL objectives in this department (excluding dept summary row)
+        dept_end_row = row_idx - 2 if objectives_with_scores else row_idx - 1
         if dept_end_row > dept_start_row:
             ws.merge_cells(start_row=dept_start_row, start_column=1, end_row=dept_end_row, end_column=1)
 
@@ -2096,7 +2224,7 @@ def export_to_excel(departments):
 
     # Apply conditional formatting to score and performance level columns (only if there's data)
     if row_idx > 2:
-        _apply_conditional_formatting(ws, row_idx, colors, num_levels)
+        _apply_conditional_formatting(ws, row_idx, colors, num_levels, summary_rows)
 
     # Set column widths
     ws.column_dimensions['A'].width = 20  # Department
@@ -2182,8 +2310,11 @@ def import_from_excel(file_content):
             if not dept_name or not obj_name or not kr_name:
                 continue  # Skip rows without essential data
 
-            # Skip objective summary rows (generated during export)
-            if 'OBJECTIVE WEIGHTED SCORE' in str(kr_name).upper():
+            # Skip summary rows (generated during export) - detect by emoji markers or English keywords
+            kr_name_str = str(kr_name) if kr_name else ''
+            if '📊' in kr_name_str or 'OBJECTIVE WEIGHTED SCORE' in kr_name_str.upper():
+                continue
+            if '🏢' in kr_name_str or 'DEPARTMENT WEIGHTED SCORE' in kr_name_str.upper():
                 continue
 
             # Parse weights (remove % if present)
@@ -2200,15 +2331,18 @@ def import_from_excel(file_content):
             obj_weight = parse_weight(obj_weight_raw)
             kr_weight = parse_weight(kr_weight_raw)
 
-            # Determine metric type
+            # Determine metric type (supports English, Russian, Uzbek)
             metric_type = 'higher_better'  # default
             if type_raw:
                 type_str = str(type_raw).lower()
-                if 'qualitative' in type_str or 'a-e' in type_str or 'a/b/c' in type_str:
+                # Qualitative: English, Russian (сифат), Uzbek (сифат)
+                if 'qualitative' in type_str or 'a-e' in type_str or 'a/b/c' in type_str or 'сифат' in type_str or '⭐' in type_str:
                     metric_type = 'qualitative'
-                elif 'lower' in type_str or '↓' in type_str:
+                # Lower is better: English, Russian (меньше), Uzbek (кам), arrow
+                elif 'lower' in type_str or '↓' in type_str or 'меньше' in type_str or 'кам' in type_str:
                     metric_type = 'lower_better'
-                elif 'higher' in type_str or '↑' in type_str:
+                # Higher is better: English, Russian (больше), Uzbek (кўп), arrow
+                elif 'higher' in type_str or '↑' in type_str or 'больше' in type_str or 'кўп' in type_str:
                     metric_type = 'higher_better'
 
             # Parse actual value
@@ -3176,9 +3310,20 @@ def main():
                 # Get actual index in full list
                 actual_dept_idx = st.session_state.departments.index(department)
 
-                # Department header
+                # Department header with score
+                dept_score_result = calculate_weighted_department_score(department)
+                dept_score = dept_score_result['score']
+                dept_level = dept_score_result['level']
+                dept_level_name = get_level_name(dept_level['key'])
+
                 st.markdown(
-                    f"<div style='margin:20px 0 15px 0; padding-bottom:8px; border-bottom:2px solid {theme['card_border']};'><h2 style='margin:0; font-size:20px; color:{theme['text_primary']}; font-weight:600;'>📁 {department['name']}</h2></div>",
+                    f"""<div style='margin:20px 0 15px 0; padding:18px 24px; border-radius:12px; background:linear-gradient(135deg, {dept_level['color']}12 0%, {dept_level['color']}05 100%); border:2px solid {dept_level['color']}40; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;'>
+                        <h2 style='margin:0; font-size:22px; color:{theme['text_primary']}; font-weight:600; flex:1; min-width:200px;'>📁 {department['name']}</h2>
+                        <div style='display:flex; align-items:center; gap:14px; flex-shrink:0;'>
+                            <span style='background:{dept_level['color']}25; color:{dept_level['color']}; padding:12px 20px; border-radius:10px; font-size:24px; font-weight:700; line-height:1;'>{dept_score}</span>
+                            <span style='background:{dept_level['color']}; color:white; padding:12px 18px; border-radius:10px; font-size:15px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; line-height:1;'>{dept_level_name}</span>
+                        </div>
+                    </div>""",
                     unsafe_allow_html=True)
 
                 objectives = department.get('objectives', [])

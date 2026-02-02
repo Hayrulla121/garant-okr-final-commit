@@ -55,7 +55,7 @@
                 "exceptional": 95.0,
                 "level_1": 100.0
               },
-              "actual": 80.0
+              "actual": 100.0
             },
             {
               "id": "a0ca445c-536a-4365-b1b9-ddc52140c6f0",
@@ -110,7 +110,7 @@
                 "exceptional": 2.0,
                 "level_1": 0.0
               },
-              "actual": 2.0
+              "actual": 1.0
             },
             {
               "id": "c23f271d-da6a-4acd-a57a-2822420d9dad",
@@ -126,7 +126,7 @@
                 "exceptional": 95.0,
                 "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 100.0
             }
           ]
         },
@@ -204,7 +204,7 @@
                 "exceptional": 90.0,
                 "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 100.0
             },
             {
               "id": "6fc0e9d5-842b-4ed5-93df-ba1dc19270a1",
@@ -236,7 +236,7 @@
                 "exceptional": 8.0,
                 "level_1": 10.0
               },
-              "actual": 0.0
+              "actual": 10.0
             }
           ]
         },
@@ -351,6 +351,35 @@
           ]
         }
       ]
+    },
+    {
+      "id": "b339233a-fa2e-4424-9fb7-47df745ac09b",
+      "name": "IT",
+      "objectives": [
+        {
+          "id": "3689c8d6-5765-47e3-a3f3-694b4f454025",
+          "name": "Backend",
+          "weight": 0,
+          "key_results": [
+            {
+              "id": "949c7fb9-3049-425f-a413-ca45aa088bb5",
+              "name": "Code Quality",
+              "metric_type": "higher_better",
+              "unit": "%",
+              "description": "",
+              "weight": 0.0,
+              "thresholds": {
+                "below": 0.0,
+                "meets": 25.0,
+                "good": 50.0,
+                "exceptional": 75.0,
+                "level_1": 100.0
+              },
+              "actual": 0.0
+            }
+          ]
+        }
+      ]
     }
   ],
   "language": "en",
@@ -361,7 +390,7 @@
       {
         "key": "below",
         "order": 0,
-        "threshold": 0.3,
+        "threshold": 0.0,
         "color": "#d9534f",
         "names": {
           "en": "не соотвтветствует",
@@ -372,7 +401,7 @@
       {
         "key": "meets",
         "order": 1,
-        "threshold": 0.5,
+        "threshold": 0.31,
         "color": "#f0ad4e",
         "names": {
           "en": "ниже ожиданий",
@@ -383,7 +412,7 @@
       {
         "key": "good",
         "order": 2,
-        "threshold": 0.85,
+        "threshold": 0.51,
         "color": "#54c2d2",
         "names": {
           "en": "на уровне ожиданий",
@@ -394,7 +423,7 @@
       {
         "key": "exceptional",
         "order": 3,
-        "threshold": 0.97,
+        "threshold": 0.86,
         "color": "#58de77",
         "names": {
           "en": "превышает ожидания",
@@ -405,7 +434,7 @@
       {
         "key": "level_1",
         "order": 4,
-        "threshold": 1.0,
+        "threshold": 0.98,
         "color": "#008c26",
         "names": {
           "en": "исключительно",
