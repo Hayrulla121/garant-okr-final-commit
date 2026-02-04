@@ -71,6 +71,7 @@ TRANSLATIONS = {
         "all_departments": "All Departments",
         "overview": "Overview",
         "total_objectives": "Total Objectives",
+        "avg_all_depts": "Avg. All Departments",
         "average_score": "Average Score",
         "departments": "Departments",
         "view_mode": "View Mode",
@@ -186,6 +187,7 @@ TRANSLATIONS = {
         "all_departments": "Все Департаменты",
         "overview": "Обзор",
         "total_objectives": "Всего целей",
+        "avg_all_depts": "Среднее всех отделов",
         "average_score": "Средняя оценка",
         "departments": "Департаменты",
         "view_mode": "Режим просмотра",
@@ -300,6 +302,7 @@ TRANSLATIONS = {
         "all_departments": "Барча Департаментлар",
         "overview": "Умумий кўриниш",
         "total_objectives": "Жами мақсадлар",
+        "avg_all_depts": "Барча бўлимлар ўртачаси",
         "average_score": "Ўртача баҳо",
         "departments": "Департаментлар",
         "view_mode": "Кўриш режими",
@@ -1046,8 +1049,7 @@ def create_gauge(score: float, compact: bool = False) -> str:
 def render_sidebar(departments):
     """Render professional left sidebar with navigation and controls"""
     theme = get_theme()
-    # Calculate overall stats using weighted calculations
-    total_objectives = sum(len(d.get('objectives', [])) for d in departments)
+    # Calculate arithmetic average of all department scores
     dept_scores = []
 
     for dept in departments:
@@ -1062,29 +1064,14 @@ def render_sidebar(departments):
         f"<h3 style='font-size:11px; color:{theme['text_secondary']}; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 16px 0; font-weight:600;'> {t('overview')}</h3>",
         unsafe_allow_html=True)
 
-    # Stats cards with gradient backgrounds
+    # Average of all departments card
     st.markdown(f"""
-        <div style='background:{theme['stats_card_bg']}; padding:16px; border-radius:10px; margin-bottom:12px; border:1px solid {theme['stats_card_border']};'>
-            <div style='font-size:32px; font-weight:700; color:{theme['stats_card_text']}; line-height:1;'>{total_objectives}</div>
-            <div style='font-size:11px; color:{theme['stats_card_label']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('total_objectives')}</div>
+        <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
+            <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
+            <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('avg_all_depts')}</div>
+            <div style='font-size:18px; color:{theme['text_secondary']}; font-weight:600; margin-top:6px;'>OKR IT блока</div>
         </div>
     """, unsafe_allow_html=True)
-
-    # Show department weighted average breakdown
-    if dept_scores:
-        st.markdown(f"""
-            <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
-                <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
-                <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('dept_weighted_avg')}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-            <div style='background:linear-gradient(135deg, {overall_level['color']}15 0%, {overall_level['color']}08 100%); padding:16px; border-radius:10px; margin-bottom:20px; border:1px solid {overall_level['color']}30;'>
-                <div style='font-size:32px; font-weight:700; color:{overall_level['color']}; line-height:1;'>{avg_overall}</div>
-                <div style='font-size:11px; color:{overall_level['color']}; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-top:4px;'>{t('weighted_score')}</div>
-            </div>
-        """, unsafe_allow_html=True)
 
 
 def render_objective_card(objective, dept_idx, obj_idx, compact=True):

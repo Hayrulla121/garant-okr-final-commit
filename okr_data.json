@@ -375,14 +375,14 @@
                 "exceptional": 75.0,
                 "level_1": 100.0
               },
-              "actual": 0.0
+              "actual": 50.0
             }
           ]
         }
       ]
     }
   ],
-  "language": "en",
+  "language": "ru",
   "score_levels_config": {
     "min_score": 0.0,
     "max_score": 1.0,
